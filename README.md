@@ -88,7 +88,7 @@ node server.js
 
 ### Deployment
 
-You can deploy StreamTalk on platforms like **Vercel** (for Next.js apps) and use a backend for the signaling server (e.g., Heroku, Render).
+You can deploy StreamTalk on platforms like **Vercel** (for Next.js apps) and use a backend for the signaling server (e.g.Render).
 
 1. Deploy the Next.js app on **Vercel**.
 2. Deploy the signaling server (e.g., Node.js with Socket.IO) separately on any Node-compatible platform.
