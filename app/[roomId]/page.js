@@ -8,10 +8,12 @@ import { useSocket } from "@/store/socket";
 import usePeer from "@/hooks/usePeer";
 import useMediaStream from "@/hooks/useMediaStream";
 import usePlayer from "@/hooks/usePlayer";
+import useChat from "@/hooks/useChat";
 
 import Player from "@/components/player";
 import Bottom from "@/components/bottom-bar";
 import CopySection from "@/components/copy-section";
+import Chat from "@/components/chat";
 
 const Room = () => {
   const socket = useSocket();
@@ -29,6 +31,15 @@ const Room = () => {
   } = usePlayer(myId, roomId, peer);
 
   const [users, setUsers] = useState([]);
+
+  // Initialize chat functionality
+  const {
+    messages,
+    connectedPeers,
+    isConnected: isChatConnected,
+    sendMessage,
+    cleanupPeerDataChannel
+  } = useChat(peer, myId, users);
 
   useEffect(() => {
     if (!socket || !peer || !stream) return;
@@ -85,6 +96,11 @@ const Room = () => {
 
     const handleUserLeave = (userId) => {
       console.log(`user ${userId} is leaving the room`);
+      
+      // Clean up chat data channel for leaving user
+      cleanupPeerDataChannel(userId);
+      
+      // Clean up peer connection
       users[userId]?.close();
       const playersCopy = cloneDeep(players);
       delete playersCopy[userId];
@@ -183,6 +199,17 @@ const Room = () => {
           toggleAudio={toggleAudio}
           toggleVideo={toggleVideo}
           leaveRoom={leaveRoom}
+        />
+      )}
+
+      {/* Chat Component - Fixed position overlay */}
+      {myId && (
+        <Chat
+          messages={messages}
+          onSendMessage={sendMessage}
+          isConnected={isChatConnected}
+          connectedPeers={connectedPeers}
+          myId={myId}
         />
       )}
     </div>
