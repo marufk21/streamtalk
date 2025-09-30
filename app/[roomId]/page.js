@@ -217,7 +217,7 @@ const Room = () => {
         {/* Main Video Area */}
         <div className="h-full flex flex-col">
           {/* Video Grid */}
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-4 pb-24 overflow-hidden">
             <SimpleVideoGrid
               players={players}
               highlightedPlayerId={
@@ -231,6 +231,7 @@ const Room = () => {
                 console.log(`Player ${playerId} clicked`);
               }}
               myId={myId}
+              className="h-full"
             />
           </div>
 

@@ -1,5 +1,6 @@
 import ReactPlayer from "react-player";
 import { Mic, MicOff, UserSquare2 } from "lucide-react";
+import { memo } from "react";
 
 const SimpleVideoGrid = ({
   players,
@@ -24,111 +25,197 @@ const SimpleVideoGrid = ({
     return "grid-cols-3";
   };
 
-  const PlayerCard = ({ playerId, player, isHighlighted = false }) => {
-    const isMe = playerId === myId;
+  // Calculate optimal video sizes based on participant count
+  const getVideoSize = (count, isHighlighted = false) => {
+    if (isHighlighted) {
+      return {
+        aspectRatio: "16/9",
+        minHeight: "400px",
+        maxHeight: "60vh",
+      };
+    }
 
-    return (
-      <div
-        className={`relative cursor-pointer transition-all duration-200 ${
-          isHighlighted ? "col-span-full" : ""
-        }`}
-        onClick={() => onPlayerClick?.(playerId)}
-      >
-        {/* Video Container */}
+    // Dynamic sizing based on participant count
+    if (count === 1) {
+      return {
+        aspectRatio: "16/9",
+        minHeight: "300px",
+        maxHeight: "50vh",
+      };
+    } else if (count === 2) {
+      return {
+        aspectRatio: "16/9",
+        minHeight: "250px",
+        maxHeight: "40vh",
+      };
+    } else if (count <= 4) {
+      return {
+        aspectRatio: "4/3",
+        minHeight: "200px",
+        maxHeight: "30vh",
+      };
+    } else {
+      return {
+        aspectRatio: "4/3",
+        minHeight: "150px",
+        maxHeight: "25vh",
+      };
+    }
+  };
+
+  // Memoized PlayerCard component for stability during dynamic changes
+  const PlayerCard = memo(
+    ({ playerId, player, isHighlighted = false, totalCount = 1 }) => {
+      const isMe = playerId === myId;
+      const videoSize = getVideoSize(totalCount, isHighlighted);
+
+      return (
         <div
-          className={`relative overflow-hidden transition-all duration-200 ${
-            isHighlighted
-              ? "rounded-lg border-2 border-blue-500 shadow-lg"
-              : "rounded-lg border border-gray-600"
-          } ${!player.playing ? "bg-gray-800" : "bg-black"}`}
-          style={{
-            aspectRatio: isHighlighted ? "16/9" : "4/3",
-            minHeight: isHighlighted ? "400px" : "150px",
-          }}
+          className={`relative cursor-pointer transition-all duration-300 ease-in-out ${
+            isHighlighted ? "col-span-full" : ""
+          }`}
+          onClick={() => onPlayerClick?.(playerId)}
         >
-          {player.playing ? (
-            <ReactPlayer
-              url={player.url}
-              muted={player.muted}
-              playing={player.playing}
-              width="100%"
-              height="100%"
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <UserSquare2
-                size={isHighlighted ? 80 : 40}
-                className="text-gray-400"
+          {/* Video Container */}
+          <div
+            className={`relative overflow-hidden transition-all duration-300 ease-in-out backdrop-blur-sm ${
+              isHighlighted
+                ? "rounded-2xl border-2 border-gradient-to-r from-red-400 via-purple-400 to-blue-400 shadow-2xl bg-white/10"
+                : "rounded-2xl border border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
+            } ${
+              !player.playing
+                ? "bg-gradient-to-br from-slate-800 to-purple-900"
+                : "bg-black"
+            }`}
+            style={{
+              aspectRatio: videoSize.aspectRatio,
+              minHeight: videoSize.minHeight,
+              maxHeight: videoSize.maxHeight,
+            }}
+          >
+            {player.playing ? (
+              <ReactPlayer
+                url={player.url}
+                muted={player.muted}
+                playing={player.playing}
+                width="100%"
+                height="100%"
+                className="object-cover"
               />
-            </div>
-          )}
-
-          {/* User Info Overlay */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              {/* Mic Status */}
-              <div
-                className={`p-1.5 rounded-full ${
-                  player.muted
-                    ? "bg-red-500/80 text-white"
-                    : "bg-green-500/80 text-white"
-                }`}
-              >
-                {player.muted ? (
-                  <MicOff size={isHighlighted ? 16 : 12} />
-                ) : (
-                  <Mic size={isHighlighted ? 16 : 12} />
-                )}
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900 backdrop-blur-sm">
+                <UserSquare2
+                  size={isHighlighted ? 80 : totalCount <= 2 ? 60 : 40}
+                  className="text-purple-300"
+                />
               </div>
+            )}
 
-              {/* User Label */}
-              <div className="px-2 py-1 bg-black/70 backdrop-blur-sm rounded text-white text-xs font-medium">
-                {isMe ? "You" : `User ${playerId.slice(0, 6)}`}
+            {/* User Info Overlay */}
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {/* Mic Status */}
+                <div
+                  className={`p-1.5 rounded-full backdrop-blur-sm transition-colors duration-200 ${
+                    player.muted
+                      ? "bg-red-500/90 text-white shadow-lg"
+                      : "bg-green-500/90 text-white shadow-lg"
+                  }`}
+                >
+                  {player.muted ? (
+                    <MicOff size={isHighlighted ? 16 : 12} />
+                  ) : (
+                    <Mic size={isHighlighted ? 16 : 12} />
+                  )}
+                </div>
+
+                {/* User Label */}
+                <div className="px-2 py-1 bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white text-xs font-medium shadow-lg">
+                  {isMe ? "You" : `User ${playerId.slice(0, 6)}`}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    );
-  };
+      );
+    },
+    (prevProps, nextProps) => {
+      // Custom comparison for memoization stability
+      return (
+        prevProps.playerId === nextProps.playerId &&
+        prevProps.player.url === nextProps.player.url &&
+        prevProps.player.muted === nextProps.player.muted &&
+        prevProps.player.playing === nextProps.player.playing &&
+        prevProps.isHighlighted === nextProps.isHighlighted &&
+        prevProps.totalCount === nextProps.totalCount
+      );
+    }
+  );
 
   return (
-    <div className={`w-full h-full ${className}`}>
+    <div className={`w-full h-full flex flex-col justify-center ${className}`}>
       {/* Main Video Area */}
       {highlightedPlayer && (
-        <div className="mb-4">
-          <PlayerCard
-            playerId={highlightedPlayerId}
-            player={highlightedPlayer}
-            isHighlighted={true}
-          />
+        <div className="mb-6 flex justify-center">
+          <div className="w-full max-w-4xl">
+            <PlayerCard
+              key={`${highlightedPlayerId}-${highlightedPlayer.url}`}
+              playerId={highlightedPlayerId}
+              player={highlightedPlayer}
+              isHighlighted={true}
+              totalCount={playerEntries.length}
+            />
+          </div>
         </div>
       )}
 
       {/* Participant Grid */}
       {otherPlayers.length > 0 && (
-        <div className={`grid gap-3 ${getGridCols(otherPlayers.length)}`}>
-          {otherPlayers.map(([playerId, player]) => (
-            <PlayerCard
-              key={playerId}
-              playerId={playerId}
-              player={player}
-              isHighlighted={false}
-            />
-          ))}
+        <div className="flex justify-center">
+          <div
+            className={`grid gap-4 ${getGridCols(
+              otherPlayers.length
+            )} w-full max-w-6xl`}
+          >
+            {otherPlayers.map(([playerId, player]) => (
+              <PlayerCard
+                key={`${playerId}-${player.url}`}
+                playerId={playerId}
+                player={player}
+                isHighlighted={false}
+                totalCount={playerEntries.length}
+              />
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Single player view (when no highlighted player) */}
+      {!highlightedPlayer &&
+        otherPlayers.length === 0 &&
+        playerEntries.length === 1 && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-3xl">
+              <PlayerCard
+                key={`${playerEntries[0][0]}-${playerEntries[0][1].url}`}
+                playerId={playerEntries[0][0]}
+                player={playerEntries[0][1]}
+                isHighlighted={false}
+                totalCount={1}
+              />
+            </div>
+          </div>
+        )}
 
       {/* Empty State */}
       {playerEntries.length === 0 && (
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center">
-            <UserSquare2 size={60} className="text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-300 mb-2">
+            <UserSquare2 size={60} className="text-purple-300 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-white mb-2">
               Waiting for participants
             </h3>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-300 text-sm">
               Share the room link to invite others
             </p>
           </div>
@@ -138,4 +225,16 @@ const SimpleVideoGrid = ({
   );
 };
 
-export default SimpleVideoGrid;
+export default memo(SimpleVideoGrid, (prevProps, nextProps) => {
+  // Memoization for rendering stability during dynamic participant changes
+  const prevPlayerIds = Object.keys(prevProps.players || {}).sort();
+  const nextPlayerIds = Object.keys(nextProps.players || {}).sort();
+
+  return (
+    prevPlayerIds.length === nextPlayerIds.length &&
+    prevPlayerIds.every((id, index) => id === nextPlayerIds[index]) &&
+    prevProps.highlightedPlayerId === nextProps.highlightedPlayerId &&
+    prevProps.myId === nextProps.myId &&
+    JSON.stringify(prevProps.players) === JSON.stringify(nextProps.players)
+  );
+});
