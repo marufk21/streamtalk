@@ -15,11 +15,26 @@ import Bottom from "@/components/bottom-bar";
 import CopySection from "@/components/copy-section";
 import Chat from "@/components/chat";
 
+// Modern UI Components
+import SimpleCallLayout from "@/components/ui/simple-call-layout";
+import FloatingControls from "@/components/ui/floating-controls";
+import SimpleVideoGrid from "@/components/ui/simple-video-grid";
+import SimpleChat from "@/components/ui/simple-chat";
+import PermissionRequest from "@/components/ui/permission-request";
+
 const Room = () => {
   const socket = useSocket();
   const { roomId } = useParams(); // Client Components can still use useParams() directly
   const { peer, myId } = usePeer();
-  const { stream } = useMediaStream();
+  const {
+    stream,
+    isAudioEnabled,
+    isVideoEnabled,
+    toggleAudio: toggleStreamAudio,
+    toggleVideo: toggleStreamVideo,
+    error: mediaError,
+    permissions,
+  } = useMediaStream();
   const {
     players,
     setPlayers,
@@ -28,9 +43,16 @@ const Room = () => {
     toggleAudio,
     toggleVideo,
     leaveRoom,
-  } = usePlayer(myId, roomId, peer);
+  } = usePlayer(myId, roomId, peer, {
+    toggleAudio: toggleStreamAudio,
+    toggleVideo: toggleStreamVideo,
+    isAudioEnabled,
+    isVideoEnabled,
+  });
 
   const [users, setUsers] = useState([]);
+  const [callStartTime] = useState(Date.now());
+  const [callDuration, setCallDuration] = useState(0);
 
   // Initialize chat functionality
   const {
@@ -38,8 +60,22 @@ const Room = () => {
     connectedPeers,
     isConnected: isChatConnected,
     sendMessage,
-    cleanupPeerDataChannel
+    cleanupPeerDataChannel,
   } = useChat(peer, myId, users);
+
+  // Call duration timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCallDuration(Math.floor((Date.now() - callStartTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [callStartTime]);
+
+  // Retry media stream on permission error
+  const retryMediaStream = async () => {
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (!socket || !peer || !stream) return;
@@ -96,10 +132,10 @@ const Room = () => {
 
     const handleUserLeave = (userId) => {
       console.log(`user ${userId} is leaving the room`);
-      
+
       // Clean up chat data channel for leaving user
       cleanupPeerDataChannel(userId);
-      
+
       // Clean up peer connection
       users[userId]?.close();
       const playersCopy = cloneDeep(players);
@@ -152,67 +188,81 @@ const Room = () => {
       ...prev,
       [myId]: {
         url: stream,
-        muted: true,
-        playing: true,
+        muted: !isAudioEnabled, // Use actual audio state
+        playing: isVideoEnabled, // Use actual video state
       },
     }));
-  }, [myId, setPlayers, stream]);
+  }, [myId, setPlayers, stream, isAudioEnabled, isVideoEnabled]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 text-gray-900">
-      {/* Active Player */}
-      <div className="flex-1 flex justify-center items-center bg-black">
-        {playerHighlighted && (
-          <Player
-            url={playerHighlighted.url}
-            muted={playerHighlighted.muted}
-            playing={playerHighlighted.playing}
-            isActive
+    <>
+      {/* Permission Request Overlay */}
+      {(mediaError || !permissions.audio || !permissions.video) && (
+        <PermissionRequest
+          error={mediaError}
+          permissions={permissions}
+          onRetry={retryMediaStream}
+        />
+      )}
+
+      <SimpleCallLayout
+        roomId={roomId}
+        participants={Object.keys(players)}
+        onShare={() => {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href);
+          }
+        }}
+      >
+        {/* Main Video Area */}
+        <div className="h-full flex flex-col">
+          {/* Video Grid */}
+          <div className="flex-1 p-4">
+            <SimpleVideoGrid
+              players={players}
+              highlightedPlayerId={
+                playerHighlighted
+                  ? Object.keys(players).find(
+                      (id) => players[id] === playerHighlighted
+                    )
+                  : null
+              }
+              onPlayerClick={(playerId) => {
+                console.log(`Player ${playerId} clicked`);
+              }}
+              myId={myId}
+            />
+          </div>
+
+          {/* Room ID Copy Section - Hidden */}
+          <div className="hidden">
+            <CopySection roomId={roomId} />
+          </div>
+        </div>
+
+        {/* Floating Controls */}
+        {myId && socket && (
+          <FloatingControls
+            muted={!isAudioEnabled}
+            playing={isVideoEnabled}
+            toggleAudio={toggleAudio}
+            toggleVideo={toggleVideo}
+            leaveRoom={leaveRoom}
           />
         )}
-      </div>
 
-      {/* Non-highlighted Players */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-4 bg-gray-800">
-        {Object.keys(nonHighlightedPlayers).map((playerId) => {
-          const { url, muted, playing } = nonHighlightedPlayers[playerId];
-          return (
-            <Player
-              key={playerId}
-              url={url}
-              muted={muted}
-              playing={playing}
-              isActive={false}
-            />
-          );
-        })}
-      </div>
-
-      {/* Room ID Copy Section */}
-      <CopySection roomId={roomId} />
-
-      {/* Bottom Controls - Only render when we have myId and socket */}
-      {myId && socket && (
-        <Bottom
-          muted={playerHighlighted?.muted ?? true} // Default to muted if undefined
-          playing={playerHighlighted?.playing ?? false} // Default to not playing if undefined
-          toggleAudio={toggleAudio}
-          toggleVideo={toggleVideo}
-          leaveRoom={leaveRoom}
-        />
-      )}
-
-      {/* Chat Component - Fixed position overlay */}
-      {myId && (
-        <Chat
-          messages={messages}
-          onSendMessage={sendMessage}
-          isConnected={isChatConnected}
-          connectedPeers={connectedPeers}
-          myId={myId}
-        />
-      )}
-    </div>
+        {/* Simple Chat Component */}
+        {myId && (
+          <SimpleChat
+            messages={messages}
+            onSendMessage={sendMessage}
+            isConnected={isChatConnected}
+            connectedPeers={connectedPeers}
+            myId={myId}
+          />
+        )}
+      </SimpleCallLayout>
+    </>
   );
 };
 
