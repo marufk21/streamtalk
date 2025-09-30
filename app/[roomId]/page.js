@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { cloneDeep } from "lodash";
 import { useParams } from "next/navigation";
 
-import { useSocket } from "@/context/socket";
+import { useSocket } from "@/store/socket";
 import usePeer from "@/hooks/usePeer";
 import useMediaStream from "@/hooks/useMediaStream";
 import usePlayer from "@/hooks/usePlayer";

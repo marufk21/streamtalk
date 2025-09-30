@@ -1,4 +1,4 @@
-import { useSocket } from "@/context/socket";
+import { useSocket } from "@/store/socket";
 import { useParams } from "next/navigation";
 
 const { useState, useEffect, useRef } = require("react");
