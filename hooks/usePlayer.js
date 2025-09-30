@@ -24,7 +24,6 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
   const leaveRoom = () => {
     if (!socket || !myId) return; // Safety check
     socket.emit("user-leave", myId, roomId);
-    console.log("leaving room", roomId);
     peer?.disconnect();
     router.push("/");
   };
@@ -37,12 +36,12 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
       toggleMediaAudio();
     }
 
-    console.log("I toggled my audio");
     setPlayers((prev) => {
       const copy = cloneDeep(prev);
       // Safety check: ensure player exists before toggling
       if (copy[myId]) {
-        copy[myId].muted = !isAudioEnabled; // Use actual audio state
+        // Always keep own audio muted in ReactPlayer to prevent feedback
+        copy[myId].muted = true;
       }
       return { ...copy };
     });
@@ -57,7 +56,6 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
       toggleMediaVideo();
     }
 
-    console.log("I toggled my video");
     setPlayers((prev) => {
       const copy = cloneDeep(prev);
       // Safety check: ensure player exists before toggling

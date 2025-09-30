@@ -188,11 +188,11 @@ const Room = () => {
       ...prev,
       [myId]: {
         url: stream,
-        muted: !isAudioEnabled, // Use actual audio state
+        muted: true, // Always mute own audio to prevent feedback
         playing: isVideoEnabled, // Use actual video state
       },
     }));
-  }, [myId, setPlayers, stream, isAudioEnabled, isVideoEnabled]);
+  }, [myId, setPlayers, stream, isVideoEnabled]); // Removed isAudioEnabled dependency
 
   return (
     <>
@@ -231,6 +231,7 @@ const Room = () => {
                 console.log(`Player ${playerId} clicked`);
               }}
               myId={myId}
+              isAudioEnabled={isAudioEnabled} // Pass actual audio state
               className="h-full"
             />
           </div>
@@ -244,7 +245,7 @@ const Room = () => {
         {/* Floating Controls */}
         {myId && socket && (
           <FloatingControls
-            muted={!isAudioEnabled}
+            muted={!isAudioEnabled} // When audio is OFF, show as muted
             playing={isVideoEnabled}
             toggleAudio={toggleAudio}
             toggleVideo={toggleVideo}

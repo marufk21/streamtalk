@@ -8,6 +8,7 @@ const SimpleVideoGrid = ({
   onPlayerClick,
   myId,
   className = "",
+  isAudioEnabled, // Add actual audio state
 }) => {
   const playerEntries = Object.entries(players || {});
   const highlightedPlayer = highlightedPlayerId
@@ -65,7 +66,13 @@ const SimpleVideoGrid = ({
 
   // Memoized PlayerCard component for stability during dynamic changes
   const PlayerCard = memo(
-    ({ playerId, player, isHighlighted = false, totalCount = 1 }) => {
+    ({
+      playerId,
+      player,
+      isHighlighted = false,
+      totalCount = 1,
+      isAudioEnabled,
+    }) => {
       const isMe = playerId === myId;
       const videoSize = getVideoSize(totalCount, isHighlighted);
 
@@ -117,12 +124,13 @@ const SimpleVideoGrid = ({
                 {/* Mic Status */}
                 <div
                   className={`p-1.5 rounded-full backdrop-blur-sm transition-colors duration-200 ${
-                    player.muted
+                    // For your own video, use actual audio state; for others, use player.muted
+                    (isMe ? !isAudioEnabled : player.muted)
                       ? "bg-red-500/90 text-white shadow-lg"
                       : "bg-green-500/90 text-white shadow-lg"
                   }`}
                 >
-                  {player.muted ? (
+                  {(isMe ? !isAudioEnabled : player.muted) ? (
                     <MicOff size={isHighlighted ? 16 : 12} />
                   ) : (
                     <Mic size={isHighlighted ? 16 : 12} />
@@ -147,7 +155,8 @@ const SimpleVideoGrid = ({
         prevProps.player.muted === nextProps.player.muted &&
         prevProps.player.playing === nextProps.player.playing &&
         prevProps.isHighlighted === nextProps.isHighlighted &&
-        prevProps.totalCount === nextProps.totalCount
+        prevProps.totalCount === nextProps.totalCount &&
+        prevProps.isAudioEnabled === nextProps.isAudioEnabled // Add isAudioEnabled to comparison
       );
     }
   );
@@ -164,6 +173,7 @@ const SimpleVideoGrid = ({
               player={highlightedPlayer}
               isHighlighted={true}
               totalCount={playerEntries.length}
+              isAudioEnabled={isAudioEnabled} // Pass the prop
             />
           </div>
         </div>
@@ -184,6 +194,7 @@ const SimpleVideoGrid = ({
                 player={player}
                 isHighlighted={false}
                 totalCount={playerEntries.length}
+                isAudioEnabled={isAudioEnabled} // Pass the prop
               />
             ))}
           </div>
@@ -202,6 +213,7 @@ const SimpleVideoGrid = ({
                 player={playerEntries[0][1]}
                 isHighlighted={false}
                 totalCount={1}
+                isAudioEnabled={isAudioEnabled} // Pass the prop
               />
             </div>
           </div>
@@ -235,6 +247,7 @@ export default memo(SimpleVideoGrid, (prevProps, nextProps) => {
     prevPlayerIds.every((id, index) => id === nextPlayerIds[index]) &&
     prevProps.highlightedPlayerId === nextProps.highlightedPlayerId &&
     prevProps.myId === nextProps.myId &&
+    prevProps.isAudioEnabled === nextProps.isAudioEnabled && // Add this
     JSON.stringify(prevProps.players) === JSON.stringify(nextProps.players)
   );
 });

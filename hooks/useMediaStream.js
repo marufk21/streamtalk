@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 
 const useMediaStream = () => {
   const [state, setState] = useState(null);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false); // Start as false until we confirm
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false); // Start as false until we confirm
   const [error, setError] = useState(null);
   const [permissions, setPermissions] = useState({
     audio: false,
@@ -23,7 +23,12 @@ const useMediaStream = () => {
         console.log("Camera permission:", permissionStatus.state);
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 44100,
+          },
           video: true,
         });
 
@@ -52,7 +57,12 @@ const useMediaStream = () => {
         if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
           try {
             const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 44100,
+              },
               video: false,
             });
             setState(audioOnlyStream);
@@ -71,10 +81,10 @@ const useMediaStream = () => {
     if (state) {
       const audioTracks = state.getAudioTracks();
       if (audioTracks.length > 0) {
-        const newState = !audioTracks[0].enabled;
+        const currentState = audioTracks[0].enabled;
+        const newState = !currentState;
         audioTracks[0].enabled = newState;
         setIsAudioEnabled(newState);
-        console.log("Audio toggled:", newState ? "ON" : "OFF");
         return newState;
       } else {
         console.warn("No audio tracks available");
