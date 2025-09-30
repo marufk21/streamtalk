@@ -1,20 +1,21 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { cloneDeep } from "lodash";
+import { useParams } from "next/navigation";
 
-import { useSocket } from "@/context/socket";
+import { useSocket } from "@/store/socket";
 import usePeer from "@/hooks/usePeer";
 import useMediaStream from "@/hooks/useMediaStream";
 import usePlayer from "@/hooks/usePlayer";
 
-import Player from "@/component/Player";
-import Bottom from "@/component/Bottom";
-import CopySection from "@/component/CopySection";
-
-import { useRouter } from "next/router";
+import Player from "@/components/player";
+import Bottom from "@/components/bottom-bar";
+import CopySection from "@/components/copy-section";
 
 const Room = () => {
   const socket = useSocket();
-  const { roomId } = useRouter().query;
+  const { roomId } = useParams(); // Client Components can still use useParams() directly
   const { peer, myId } = usePeer();
   const { stream } = useMediaStream();
   const {
@@ -174,14 +175,16 @@ const Room = () => {
       {/* Room ID Copy Section */}
       <CopySection roomId={roomId} />
 
-      {/* Bottom Controls */}
-      <Bottom
-        muted={playerHighlighted?.muted}
-        playing={playerHighlighted?.playing}
-        toggleAudio={toggleAudio}
-        toggleVideo={toggleVideo}
-        leaveRoom={leaveRoom}
-      />
+      {/* Bottom Controls - Only render when we have myId and socket */}
+      {myId && socket && (
+        <Bottom
+          muted={playerHighlighted?.muted ?? true} // Default to muted if undefined
+          playing={playerHighlighted?.playing ?? false} // Default to not playing if undefined
+          toggleAudio={toggleAudio}
+          toggleVideo={toggleVideo}
+          leaveRoom={leaveRoom}
+        />
+      )}
     </div>
   );
 };
