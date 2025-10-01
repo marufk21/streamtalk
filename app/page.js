@@ -13,18 +13,29 @@ export default function Home() {
 
   useEffect(() => {
     if (socket) {
-      if (socket.connected) {
-        setConnectionStatus("✅ Connected to localhost:3000");
+      // Set initial status based on socket state
+      if (socket.isConnected) {
+        setConnectionStatus("✅ Connected");
+      } else if (socket.isConnecting) {
+        setConnectionStatus("🔄 Connecting...");
       } else {
-        setConnectionStatus("🔄 Connecting to localhost:3000...");
+        setConnectionStatus("⏳ Ready to connect");
       }
 
+      socket.on("connecting", () => {
+        setConnectionStatus("🔄 Connecting...");
+      });
+
       socket.on("connect", () => {
-        setConnectionStatus("✅ Connected to localhost:3000");
+        setConnectionStatus("✅ Connected");
       });
 
       socket.on("disconnect", () => {
         setConnectionStatus("❌ Disconnected");
+      });
+
+      socket.on("connect_error", () => {
+        setConnectionStatus("❌ Connection failed");
       });
     }
   }, [socket]);
@@ -60,10 +71,26 @@ export default function Home() {
           <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-2xl">
             Connect instantly with crystal-clear video calls
           </p>
-          <p className="text-lg text-gray-400 max-w-xl">
+          <p className="text-lg text-gray-400 max-w-xl mb-6">
             Experience seamless communication with our modern video streaming
             platform
           </p>
+
+          {/* Connection Status */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-lg border border-white/20 rounded-full text-sm text-gray-300">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus.includes("✅")
+                  ? "bg-green-500"
+                  : connectionStatus.includes("🔄")
+                  ? "bg-yellow-500 animate-pulse"
+                  : connectionStatus.includes("❌")
+                  ? "bg-red-500"
+                  : "bg-gray-400 animate-pulse"
+              }`}
+            ></div>
+            <span>{connectionStatus}</span>
+          </div>
         </div>
 
         {/* Main action cards */}

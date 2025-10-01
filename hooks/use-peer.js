@@ -31,11 +31,11 @@ const usePeer = () => {
               { urls: "stun:stun.ekiga.net" },
               { urls: "stun:stun.ideasip.com" },
             ],
-            sdpSemantics: 'unified-plan', // Use unified plan for better compatibility
+            sdpSemantics: "unified-plan", // Use unified plan for better compatibility
             iceCandidatePoolSize: 10, // Gather more ICE candidates
           },
           // Add debug logging
-          debug: process.env.NODE_ENV === 'development' ? 2 : 0,
+          debug: process.env.NODE_ENV === "development" ? 2 : 0,
         });
         setPeer(myPeer);
 
@@ -43,17 +43,9 @@ const usePeer = () => {
           console.log("✅ PeerJS connected! Your peer ID:", id);
           setMyId(id);
 
-          // Check if socket is connected before emitting
-          if (socket.connected) {
-            console.log("📡 Joining room:", roomId, "with peer ID:", id);
-            socket.emit("join-room", roomId, id);
-          } else {
-            console.log("⏳ Socket not connected, waiting...");
-            socket.on("connect", () => {
-              console.log("📡 Socket connected, now joining room:", roomId);
-              socket.emit("join-room", roomId, id);
-            });
-          }
+          // Always try to join room - socket will handle connection state
+          console.log("📡 Joining room:", roomId, "with peer ID:", id);
+          socket.emit("join-room", roomId, id);
         });
 
         myPeer.on("error", (error) => {

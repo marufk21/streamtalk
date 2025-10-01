@@ -1,171 +1,214 @@
 import { NextRequest } from "next/server";
-import { Server } from "socket.io";
-import { createServer } from "http";
 
-let io = null;
-let httpServer = null;
+// In-memory store for room data (in production, use Redis or similar)
+const rooms = new Map();
+const userSessions = new Map();
 
-export function initializeSocketIO() {
-  if (io) {
-    return io;
+// Clean up old sessions (older than 5 minutes)
+const cleanupOldSessions = () => {
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000;
+
+  for (const [sessionId, session] of userSessions.entries()) {
+    if (now - session.lastSeen > fiveMinutes) {
+      // Remove user from room
+      if (session.roomId && rooms.has(session.roomId)) {
+        const room = rooms.get(session.roomId);
+        room.users = room.users.filter((user) => user.id !== session.userId);
+        if (room.users.length === 0) {
+          rooms.delete(session.roomId);
+        }
+      }
+      userSessions.delete(sessionId);
+    }
   }
+};
 
-  const dev = process.env.NODE_ENV !== "production";
-
-  // Create HTTP server for Socket.IO
-  httpServer = createServer();
-
-  io = new Server(httpServer, {
-    path: "/api/socket",
-    transports: ["polling", "websocket"],
-    allowEIO3: true,
-    cors: {
-      origin: dev
-        ? ["http://localhost:3000"]
-        : ["https://stream-talk.vercel.app"],
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-    pingTimeout: 60000,
-    pingInterval: 25000,
-  });
-
-  io.on("connection", (socket) => {
-    console.log("✅ Socket connected:", socket.id);
-
-    // Store user info for cleanup on disconnect
-    let currentUser = null;
-    let currentRoom = null;
-
-    socket.on("join-room", (roomId, userId) => {
-      try {
-        console.log(`👤 User ${userId} joining room ${roomId}`);
-
-        // Validate inputs
-        if (!roomId || !userId) {
-          console.error("❌ Invalid roomId or userId provided");
-          socket.emit("error", "Invalid roomId or userId");
-          return;
-        }
-
-        // Store current user info
-        currentUser = userId;
-        currentRoom = roomId;
-
-        socket.join(roomId);
-        socket.broadcast.to(roomId).emit("user-connected", userId);
-
-        // Send confirmation back to the user
-        socket.emit("joined-room", roomId);
-      } catch (error) {
-        console.error("❌ Error in join-room:", error);
-        socket.emit("error", "Failed to join room");
-      }
-    });
-
-    socket.on("user-toggle-audio", (userId, roomId) => {
-      try {
-        console.log(`🔊 User ${userId} toggled audio in room ${roomId}`);
-
-        if (!userId || !roomId) {
-          console.error("❌ Invalid userId or roomId for audio toggle");
-          return;
-        }
-
-        socket.broadcast.to(roomId).emit("user-toggle-audio", userId);
-      } catch (error) {
-        console.error("❌ Error in user-toggle-audio:", error);
-      }
-    });
-
-    socket.on("user-toggle-video", (userId, roomId) => {
-      try {
-        console.log(`📹 User ${userId} toggled video in room ${roomId}`);
-
-        if (!userId || !roomId) {
-          console.error("❌ Invalid userId or roomId for video toggle");
-          return;
-        }
-
-        socket.broadcast.to(roomId).emit("user-toggle-video", userId);
-      } catch (error) {
-        console.error("❌ Error in user-toggle-video:", error);
-      }
-    });
-
-    socket.on("user-leave", (userId, roomId) => {
-      try {
-        console.log(`👋 User ${userId} leaving room ${roomId}`);
-
-        // Clear current user info since they're leaving
-        if (currentUser === userId) {
-          currentUser = null;
-          currentRoom = null;
-        }
-
-        if (roomId) {
-          socket.leave(roomId);
-          socket.broadcast.to(roomId).emit("user-leave", userId);
-        }
-      } catch (error) {
-        console.error("❌ Error in user-leave:", error);
-      }
-    });
-
-    socket.on("disconnect", (reason) => {
-      try {
-        console.log("❌ Socket disconnected:", socket.id, reason);
-
-        // If user was in a room, notify others that they left
-        if (currentUser && currentRoom) {
-          console.log(
-            `👋 User ${currentUser} automatically leaving room ${currentRoom} due to disconnect`
-          );
-          socket.broadcast.to(currentRoom).emit("user-leave", currentUser);
-        }
-
-        // Clean up user info
-        currentUser = null;
-        currentRoom = null;
-      } catch (error) {
-        console.error("❌ Error in disconnect handler:", error);
-      }
-    });
-
-    socket.on("error", (error) => {
-      console.error("❌ Socket error:", error);
-    });
-  });
-
-  // Start the HTTP server
-  const port = process.env.SOCKET_PORT || 3000;
-  httpServer.listen(port, () => {
-    console.log(`📡 Socket.IO server running on port ${port}`);
-  });
-
-  return io;
-}
-
-// Initialize Socket.IO when the module loads
-const ioInstance = initializeSocketIO();
+// Run cleanup every minute
+setInterval(cleanupOldSessions, 60000);
 
 export async function GET(request) {
-  return new Response("Socket.IO server running", {
-    status: 200,
-    headers: {
-      "Content-Type": "text/plain",
-    },
-  });
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+  const roomId = searchParams.get("roomId");
+  const userId = searchParams.get("userId");
+  const sessionId = searchParams.get("sessionId");
+
+  try {
+    switch (action) {
+      case "join-room":
+        if (!roomId || !userId) {
+          return Response.json(
+            { error: "Missing roomId or userId" },
+            { status: 400 }
+          );
+        }
+
+        // Create session
+        const newSessionId = `session_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+        userSessions.set(newSessionId, {
+          userId,
+          roomId,
+          lastSeen: Date.now(),
+        });
+
+        // Add user to room
+        if (!rooms.has(roomId)) {
+          rooms.set(roomId, { users: [] });
+        }
+
+        const room = rooms.get(roomId);
+        const existingUserIndex = room.users.findIndex(
+          (user) => user.id === userId
+        );
+
+        if (existingUserIndex >= 0) {
+          room.users[existingUserIndex] = {
+            id: userId,
+            sessionId: newSessionId,
+            joinedAt: Date.now(),
+          };
+        } else {
+          room.users.push({
+            id: userId,
+            sessionId: newSessionId,
+            joinedAt: Date.now(),
+          });
+        }
+
+        return Response.json({
+          success: true,
+          sessionId: newSessionId,
+          roomUsers: room.users.map((u) => u.id),
+        });
+
+      case "get-room-users":
+        if (!roomId) {
+          return Response.json({ error: "Missing roomId" }, { status: 400 });
+        }
+
+        const roomData = rooms.get(roomId);
+        if (!roomData) {
+          return Response.json({ users: [] });
+        }
+
+        return Response.json({ users: roomData.users.map((u) => u.id) });
+
+      case "leave-room":
+        if (!roomId || !userId) {
+          return Response.json(
+            { error: "Missing roomId or userId" },
+            { status: 400 }
+          );
+        }
+
+        if (rooms.has(roomId)) {
+          const room = rooms.get(roomId);
+          room.users = room.users.filter((user) => user.id !== userId);
+          if (room.users.length === 0) {
+            rooms.delete(roomId);
+          }
+        }
+
+        // Clean up session
+        for (const [id, session] of userSessions.entries()) {
+          if (session.userId === userId && session.roomId === roomId) {
+            userSessions.delete(id);
+            break;
+          }
+        }
+
+        return Response.json({ success: true });
+
+      case "ping":
+        if (sessionId) {
+          const session = userSessions.get(sessionId);
+          if (session) {
+            session.lastSeen = Date.now();
+            return Response.json({ success: true });
+          }
+        }
+        return Response.json({ error: "Session not found" }, { status: 404 });
+
+      default:
+        return Response.json({ error: "Invalid action" }, { status: 400 });
+    }
+  } catch (error) {
+    console.error("API Error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function POST(request) {
-  return new Response("Socket.IO server running", {
-    status: 200,
-    headers: {
-      "Content-Type": "text/plain",
-    },
-  });
-}
+  try {
+    const body = await request.json();
+    const { action, roomId, userId, sessionId, targetUserId } = body;
 
-// Export the io instance for use in other parts of the app
-export { ioInstance as io };
+    switch (action) {
+      case "toggle-audio":
+        if (!roomId || !userId) {
+          return Response.json(
+            { error: "Missing roomId or userId" },
+            { status: 400 }
+          );
+        }
+
+        // Broadcast to other users in the room
+        if (rooms.has(roomId)) {
+          const room = rooms.get(roomId);
+          const otherUsers = room.users.filter((user) => user.id !== userId);
+
+          // In a real implementation, you'd store this event and poll for it
+          // For now, we'll just return success
+          return Response.json({
+            success: true,
+            event: "user-toggle-audio",
+            targetUserId: userId,
+            affectedUsers: otherUsers.map((u) => u.id),
+          });
+        }
+
+        return Response.json({ error: "Room not found" }, { status: 404 });
+
+      case "toggle-video":
+        if (!roomId || !userId) {
+          return Response.json(
+            { error: "Missing roomId or userId" },
+            { status: 400 }
+          );
+        }
+
+        if (rooms.has(roomId)) {
+          const room = rooms.get(roomId);
+          const otherUsers = room.users.filter((user) => user.id !== userId);
+
+          return Response.json({
+            success: true,
+            event: "user-toggle-video",
+            targetUserId: userId,
+            affectedUsers: otherUsers.map((u) => u.id),
+          });
+        }
+
+        return Response.json({ error: "Room not found" }, { status: 404 });
+
+      case "ping":
+        if (sessionId) {
+          const session = userSessions.get(sessionId);
+          if (session) {
+            session.lastSeen = Date.now();
+            return Response.json({ success: true });
+          }
+        }
+        return Response.json({ error: "Session not found" }, { status: 404 });
+
+      default:
+        return Response.json({ error: "Invalid action" }, { status: 400 });
+    }
+  } catch (error) {
+    console.error("API Error:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
