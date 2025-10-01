@@ -70,7 +70,7 @@ const SimpleCallLayout = ({
         <div className="absolute -bottom-8 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000"></div>
       </div>
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-40 relative">
+      <div className="top-0 left-0 right-0 z-40 relative">
         <div className="flex items-center justify-between p-4">
           {/* Room Info */}
           <div className="flex items-center space-x-3">
