@@ -18,11 +18,10 @@ import FloatingControls from "@/components/ui/floating-controls";
 import SimpleVideoGrid from "@/components/ui/simple-video-grid";
 import SimpleChat from "@/components/ui/simple-chat";
 import PermissionRequest from "@/components/ui/permission-request";
-import AudioTroubleshooter from "@/components/ui/audio-troubleshooter";
 
 const Room = () => {
   const socket = useSocket();
-  const { roomId } = useParams(); // Client Components can still use useParams() directly
+  const { roomId } = useParams(); 
   const { peer, myId } = usePeer();
   const {
     stream,
@@ -390,21 +389,6 @@ const Room = () => {
             myId={myId}
           />
         )}
-
-        {/* Audio Troubleshooter */}
-        <AudioTroubleshooter
-          isOpen={showTroubleshooter}
-          onClose={() => setShowTroubleshooter(false)}
-          onFixApplied={() => {
-            // Optionally refresh media stream after fixes
-            console.log("Audio fixes applied");
-          }}
-          audioDevices={audioDevices}
-          selectedAudioInput={selectedAudioInput}
-          selectedAudioOutput={selectedAudioOutput}
-          switchAudioInput={switchAudioInput}
-          switchAudioOutput={switchAudioOutput}
-        />
       </SimpleCallLayout>
     </>
   );
