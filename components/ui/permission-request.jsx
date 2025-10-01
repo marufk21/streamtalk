@@ -147,8 +147,8 @@ const PermissionRequest = ({ error, permissions, onRetry, className = "" }) => {
           <p className="text-gray-300 text-xs">
             {errorInfo?.type === "permission" ? (
               <>
-                💡 Look for the camera/microphone icon in your browser's address
-                bar and click "Allow"
+                💡 Look for the camera/microphone icon in your browser&apos;s
+                address bar and click &quot;Allow&quot;
               </>
             ) : errorInfo?.type === "device" ? (
               <>

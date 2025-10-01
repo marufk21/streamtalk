@@ -149,7 +149,7 @@ const Room = () => {
       socket.off("user-toggle-video", handleToggleVideo);
       socket.off("user-leave", handleUserLeave);
     };
-  }, [players, setPlayers, socket, users]);
+  }, [players, setPlayers, socket, users, cleanupPeerDataChannel]);
 
   useEffect(() => {
     if (!peer || !stream) return;

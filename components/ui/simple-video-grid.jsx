@@ -166,6 +166,8 @@ const SimpleVideoGrid = ({
       );
     }
   );
+  
+  PlayerCard.displayName = 'PlayerCard';
 
   return (
     <div
