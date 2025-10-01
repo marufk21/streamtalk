@@ -23,17 +23,28 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
 
   const leaveRoom = () => {
     if (!socket || !myId) return; // Safety check
+
+    console.log(`👋 Leaving room ${roomId} with peer ID ${myId}`);
+
+    // Emit leave event to server
     socket.emit("user-leave", myId, roomId);
-    peer?.disconnect();
+
+    // Close peer connection
+    if (peer && !peer.destroyed) {
+      peer.disconnect();
+    }
+
+    // Navigate back to home
     router.push("/");
   };
 
   const toggleAudio = () => {
     if (!socket || !myId) return; // Safety check
 
-    // Toggle the actual media stream
+    // Toggle the actual media stream first
+    let newAudioState = false;
     if (toggleMediaAudio) {
-      toggleMediaAudio();
+      newAudioState = toggleMediaAudio();
     }
 
     setPlayers((prev) => {
@@ -42,10 +53,16 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
       if (copy[myId]) {
         // Always keep own audio muted in ReactPlayer to prevent feedback
         copy[myId].muted = true;
+        // But track the actual audio state separately
+        copy[myId].audioEnabled = newAudioState;
       }
       return { ...copy };
     });
+
+    // Notify other users about the audio toggle
     socket.emit("user-toggle-audio", myId, roomId);
+
+    console.log(`Audio toggled: ${newAudioState ? "ON" : "OFF"}`);
   };
 
   const toggleVideo = () => {

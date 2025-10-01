@@ -25,6 +25,8 @@ app.prepare().then(() => {
   // Initialize Socket.IO
   const io = new Server(httpServer, {
     path: "/api/socket",
+    transports: ["polling", "websocket"],
+    allowEIO3: true,
     cors: {
       origin: dev
         ? [
@@ -32,7 +34,7 @@ app.prepare().then(() => {
             "http://localhost:3001",
             "http://localhost:3002",
           ]
-        : "https://streamtalk.onrender.com",
+        : ["https://stream-talk.vercel.app"],
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -41,8 +43,17 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
     console.log("✅ Socket connected:", socket.id);
 
+    // Store user info for cleanup on disconnect
+    let currentUser = null;
+    let currentRoom = null;
+
     socket.on("join-room", (roomId, userId) => {
       console.log(`👤 User ${userId} joining room ${roomId}`);
+
+      // Store current user info
+      currentUser = userId;
+      currentRoom = roomId;
+
       socket.join(roomId);
       socket.broadcast.to(roomId).emit("user-connected", userId);
     });
@@ -59,13 +70,37 @@ app.prepare().then(() => {
 
     socket.on("user-leave", (userId, roomId) => {
       console.log(`👋 User ${userId} leaving room ${roomId}`);
+
+      // Clear current user info since they're leaving
+      if (currentUser === userId) {
+        currentUser = null;
+        currentRoom = null;
+      }
+
       socket.leave(roomId);
       socket.broadcast.to(roomId).emit("user-leave", userId);
     });
 
     socket.on("disconnect", (reason) => {
       console.log("❌ Socket disconnected:", socket.id, reason);
+
+      // If user was in a room, notify others that they left
+      if (currentUser && currentRoom) {
+        console.log(
+          `👋 User ${currentUser} automatically leaving room ${currentRoom} due to disconnect`
+        );
+        socket.broadcast.to(currentRoom).emit("user-leave", currentUser);
+      }
     });
+
+    socket.on("error", (error) => {
+      console.error("❌ Socket error:", error);
+    });
+  });
+
+  // Error handling for the HTTP server
+  httpServer.on("error", (err) => {
+    console.error("❌ HTTP Server error:", err);
   });
 
   httpServer
@@ -75,6 +110,6 @@ app.prepare().then(() => {
     })
     .listen(port, () => {
       console.log(`🚀 Server running on http://${hostname}:${port}`);
-      console.log("📡 Socket.IO server initialized");
+      console.log("📡 Socket.IO server initialized with path: /api/socket");
     });
 });
