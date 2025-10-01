@@ -5,7 +5,21 @@ const SocketHandler = (req, res) => {
   if (res.socket.server.io) {
     console.log("socket already running");
   } else {
-    const io = new Server(res.socket.server);
+    const io = new Server(res.socket.server, {
+      path: "/api/socket",
+      addTrailingSlash: false,
+      cors: {
+        origin:
+          process.env.NODE_ENV === "production"
+            ? "https://stream-talk.vercel.app"
+            : [
+                `http://localhost:3000`,
+                `http://localhost:3001`,
+                `http://localhost:3002`,
+              ],
+        methods: ["GET", "POST"],
+      },
+    });
     res.socket.server.io = io;
 
     io.on("connection", (socket) => {
