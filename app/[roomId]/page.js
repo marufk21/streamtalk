@@ -18,6 +18,7 @@ import FloatingControls from "@/components/ui/floating-controls";
 import SimpleVideoGrid from "@/components/ui/simple-video-grid";
 import SimpleChat from "@/components/ui/simple-chat";
 import PermissionRequest from "@/components/ui/permission-request";
+import AudioTroubleshooter from "@/components/ui/audio-troubleshooter";
 
 const Room = () => {
   const socket = useSocket();
@@ -31,6 +32,11 @@ const Room = () => {
     toggleVideo: toggleStreamVideo,
     error: mediaError,
     permissions,
+    audioDevices,
+    selectedAudioInput,
+    selectedAudioOutput,
+    switchAudioInput,
+    switchAudioOutput,
   } = useMediaStream();
   const {
     players,
@@ -50,6 +56,7 @@ const Room = () => {
   const [users, setUsers] = useState([]);
   const [callStartTime] = useState(Date.now());
   const [callDuration, setCallDuration] = useState(0);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
 
   // Initialize chat functionality
   const {
@@ -69,8 +76,28 @@ const Room = () => {
     return () => clearInterval(timer);
   }, [callStartTime]);
 
-  // Retry media stream on permission error
+  // Add yourself to players when stream is ready
+  useEffect(() => {
+    if (myId && stream) {
+      setPlayers((prev) => ({
+        ...prev,
+        [myId]: {
+          url: stream,
+          muted: true, // Always mute own audio to prevent feedback
+          playing: isVideoEnabled,
+          audioEnabled: isAudioEnabled, // Track actual audio state
+        },
+      }));
+    }
+  }, [myId, stream, isAudioEnabled, isVideoEnabled, setPlayers]);
+
+  // Enhanced retry media stream with audio diagnostics
   const retryMediaStream = async () => {
+    if (process.env.NODE_ENV === "development") {
+      const { quickAudioCheck } = await import("@/utils/audio-diagnostics");
+      console.log("🔍 Running audio diagnostics before retry...");
+      await quickAudioCheck();
+    }
     window.location.reload();
   };
 
@@ -87,8 +114,9 @@ const Room = () => {
           ...prev,
           [newUser]: {
             url: incomingStream,
-            muted: true,
+            muted: false, // Allow remote audio to be heard
             playing: true,
+            audioEnabled: true, // Track actual audio state
           },
         }));
 
@@ -96,6 +124,38 @@ const Room = () => {
           ...prev,
           [newUser]: call,
         }));
+      });
+
+      // Handle call close event for outgoing calls
+      call.on("close", () => {
+        console.log(`Outgoing call closed with ${newUser}`);
+        setPlayers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[newUser];
+          return copy;
+        });
+
+        setUsers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[newUser];
+          return copy;
+        });
+      });
+
+      // Handle call error event for outgoing calls
+      call.on("error", (error) => {
+        console.error(`Outgoing call error with ${newUser}:`, error);
+        setPlayers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[newUser];
+          return copy;
+        });
+
+        setUsers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[newUser];
+          return copy;
+        });
       });
     };
 
@@ -113,7 +173,12 @@ const Room = () => {
       console.log(`user with id ${userId} toggled audio`);
       setPlayers((prev) => {
         const copy = cloneDeep(prev);
-        copy[userId].muted = !copy[userId].muted;
+        if (copy[userId]) {
+          // Toggle the audioEnabled state for display purposes
+          copy[userId].audioEnabled = !copy[userId].audioEnabled;
+          // Set muted based on audioEnabled state - if audio is disabled, mute it
+          copy[userId].muted = !copy[userId].audioEnabled;
+        }
         return { ...copy };
       });
     };
@@ -134,10 +199,23 @@ const Room = () => {
       cleanupPeerDataChannel(userId);
 
       // Clean up peer connection
-      users[userId]?.close();
-      const playersCopy = cloneDeep(players);
-      delete playersCopy[userId];
-      setPlayers(playersCopy);
+      if (users[userId]) {
+        users[userId].close();
+      }
+
+      // Remove from players state
+      setPlayers((prev) => {
+        const copy = cloneDeep(prev);
+        delete copy[userId];
+        return copy;
+      });
+
+      // Remove from users state
+      setUsers((prev) => {
+        const copy = cloneDeep(prev);
+        delete copy[userId];
+        return copy;
+      });
     };
 
     socket.on("user-toggle-audio", handleToggleAudio);
@@ -164,8 +242,9 @@ const Room = () => {
           ...prev,
           [callerId]: {
             url: incomingStream,
-            muted: true,
+            muted: false, // Allow remote audio to be heard
             playing: true,
+            audioEnabled: true, // Track actual audio state
           },
         }));
 
@@ -173,6 +252,40 @@ const Room = () => {
           ...prev,
           [callerId]: call,
         }));
+      });
+
+      // Handle call close event
+      call.on("close", () => {
+        console.log(`Call closed with ${callerId}`);
+        // Remove from players and users when call is closed
+        setPlayers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[callerId];
+          return copy;
+        });
+
+        setUsers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[callerId];
+          return copy;
+        });
+      });
+
+      // Handle call error event
+      call.on("error", (error) => {
+        console.error(`Call error with ${callerId}:`, error);
+        // Remove from players and users on error
+        setPlayers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[callerId];
+          return copy;
+        });
+
+        setUsers((prev) => {
+          const copy = cloneDeep(prev);
+          delete copy[callerId];
+          return copy;
+        });
       });
     });
   }, [peer, setPlayers, stream]);
@@ -190,6 +303,21 @@ const Room = () => {
       },
     }));
   }, [myId, setPlayers, stream, isVideoEnabled]); // Removed isAudioEnabled dependency
+
+  // Apply audio output device to all players when it changes
+  useEffect(() => {
+    if (selectedAudioOutput && selectedAudioOutput !== 'default') {
+      // Apply to all video elements in the page
+      const videoElements = document.querySelectorAll('video');
+      videoElements.forEach(video => {
+        if (video.setSinkId) {
+          video.setSinkId(selectedAudioOutput).catch(err => {
+            console.warn('Failed to set audio output device:', err);
+          });
+        }
+      });
+    }
+  }, [selectedAudioOutput]);
 
   return (
     <>
@@ -229,6 +357,7 @@ const Room = () => {
               }}
               myId={myId}
               isAudioEnabled={isAudioEnabled} // Pass actual audio state
+              selectedAudioOutput={selectedAudioOutput} // Pass selected audio output
               className="h-full"
             />
           </div>
@@ -247,6 +376,7 @@ const Room = () => {
             toggleAudio={toggleAudio}
             toggleVideo={toggleVideo}
             leaveRoom={leaveRoom}
+            onTroubleshoot={() => setShowTroubleshooter(true)}
           />
         )}
 
@@ -260,6 +390,21 @@ const Room = () => {
             myId={myId}
           />
         )}
+
+        {/* Audio Troubleshooter */}
+        <AudioTroubleshooter
+          isOpen={showTroubleshooter}
+          onClose={() => setShowTroubleshooter(false)}
+          onFixApplied={() => {
+            // Optionally refresh media stream after fixes
+            console.log("Audio fixes applied");
+          }}
+          audioDevices={audioDevices}
+          selectedAudioInput={selectedAudioInput}
+          selectedAudioOutput={selectedAudioOutput}
+          switchAudioInput={switchAudioInput}
+          switchAudioOutput={switchAudioOutput}
+        />
       </SimpleCallLayout>
     </>
   );

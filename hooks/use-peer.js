@@ -24,8 +24,18 @@ const usePeer = () => {
             iceServers: [
               { urls: "stun:stun.l.google.com:19302" },
               { urls: "stun:stun1.l.google.com:19302" },
+              { urls: "stun:stun2.l.google.com:19302" },
+              { urls: "stun:stun3.l.google.com:19302" },
+              { urls: "stun:stun4.l.google.com:19302" },
+              // Additional STUN servers for better connectivity
+              { urls: "stun:stun.ekiga.net" },
+              { urls: "stun:stun.ideasip.com" },
             ],
+            sdpSemantics: 'unified-plan', // Use unified plan for better compatibility
+            iceCandidatePoolSize: 10, // Gather more ICE candidates
           },
+          // Add debug logging
+          debug: process.env.NODE_ENV === 'development' ? 2 : 0,
         });
         setPeer(myPeer);
 

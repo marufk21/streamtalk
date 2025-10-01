@@ -9,6 +9,7 @@ const SimpleVideoGrid = ({
   myId,
   className = "",
   isAudioEnabled,
+  selectedAudioOutput,
 }) => {
   const playerEntries = Object.entries(players || {});
   const highlightedPlayer = highlightedPlayerId
@@ -104,6 +105,17 @@ const SimpleVideoGrid = ({
                 width="100%"
                 height="100%"
                 className="object-cover"
+                onReady={(player) => {
+                  // Set audio output device when player is ready
+                  if (selectedAudioOutput && selectedAudioOutput !== 'default') {
+                    const videoElement = player.getInternalPlayer();
+                    if (videoElement && videoElement.setSinkId) {
+                      videoElement.setSinkId(selectedAudioOutput).catch(err => {
+                        console.warn('Failed to set audio output device:', err);
+                      });
+                    }
+                  }
+                }}
               />
             ) : (
               <div
@@ -130,13 +142,21 @@ const SimpleVideoGrid = ({
                 {/* Mic Status */}
                 <div
                   className={`p-1.5 rounded-full backdrop-blur-sm transition-colors duration-200 ${
-                    // For your own video, use actual audio state; for others, use player.muted
-                    (isMe ? !isAudioEnabled : player.muted)
+                    // For your own video, use actual audio state; for others, use audioEnabled or fallback to muted
+                    (
+                      isMe
+                        ? !isAudioEnabled
+                        : !(player.audioEnabled ?? !player.muted)
+                    )
                       ? "bg-red-500/90 text-white shadow-lg"
                       : "bg-green-500/90 text-white shadow-lg"
                   }`}
                 >
-                  {(isMe ? !isAudioEnabled : player.muted) ? (
+                  {(
+                    isMe
+                      ? !isAudioEnabled
+                      : !(player.audioEnabled ?? !player.muted)
+                  ) ? (
                     <MicOff size={isHighlighted ? 16 : 12} />
                   ) : (
                     <Mic size={isHighlighted ? 16 : 12} />
