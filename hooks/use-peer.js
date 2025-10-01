@@ -14,16 +14,70 @@ const usePeer = () => {
     if (isPeerSet.current || !roomId || !socket) return;
     isPeerSet.current = true;
     let myPeer;
-    (async function initPeer() {
-      myPeer = new (await import("peerjs")).default();
-      setPeer(myPeer);
 
-      myPeer.on("open", (id) => {
-        console.log(`your peer id is ${id}`);
-        setMyId(id);
-        socket?.emit("join-room", roomId, id);
-      });
-    })();
+    const initPeer = async () => {
+      try {
+        console.log("🔄 Initializing PeerJS...");
+        const Peer = (await import("peerjs")).default;
+        myPeer = new Peer({
+          config: {
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+            ],
+          },
+        });
+        setPeer(myPeer);
+
+        myPeer.on("open", (id) => {
+          console.log("✅ PeerJS connected! Your peer ID:", id);
+          setMyId(id);
+
+          // Check if socket is connected before emitting
+          if (socket.connected) {
+            console.log("📡 Joining room:", roomId, "with peer ID:", id);
+            socket.emit("join-room", roomId, id);
+          } else {
+            console.log("⏳ Socket not connected, waiting...");
+            socket.on("connect", () => {
+              console.log("📡 Socket connected, now joining room:", roomId);
+              socket.emit("join-room", roomId, id);
+            });
+          }
+        });
+
+        myPeer.on("error", (error) => {
+          console.error("❌ PeerJS error:", error);
+          // Retry connection after a delay
+          setTimeout(() => {
+            if (!myPeer.destroyed) {
+              console.log("🔄 Retrying PeerJS connection...");
+              myPeer.reconnect();
+            }
+          }, 2000);
+        });
+
+        myPeer.on("disconnected", () => {
+          console.log("⚠️ PeerJS disconnected, attempting to reconnect...");
+          if (!myPeer.destroyed) {
+            myPeer.reconnect();
+          }
+        });
+      } catch (error) {
+        console.error("❌ Failed to initialize PeerJS:", error);
+        isPeerSet.current = false; // Allow retry
+      }
+    };
+
+    initPeer();
+
+    // Cleanup function
+    return () => {
+      if (myPeer && !myPeer.destroyed) {
+        console.log("🧹 Cleaning up PeerJS connection...");
+        myPeer.destroy();
+      }
+    };
   }, [roomId, socket]);
 
   return {

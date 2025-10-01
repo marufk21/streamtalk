@@ -11,7 +11,7 @@ const SocketHandler = (req, res) => {
       cors: {
         origin:
           process.env.NODE_ENV === "production"
-            ? "https://stream-talk.vercel.app"
+            ? "https://streamtalk.onrender.com"
             : [
                 `http://localhost:3000`,
                 `http://localhost:3001`,
