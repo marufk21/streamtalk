@@ -2,11 +2,32 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSocket } from "@/store/socket";
 
 export default function Home() {
   const router = useRouter();
   const [roomId, setRoomId] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState("Checking...");
+  const socket = useSocket();
+
+  useEffect(() => {
+    if (socket) {
+      if (socket.connected) {
+        setConnectionStatus("✅ Connected to localhost:3000");
+      } else {
+        setConnectionStatus("🔄 Connecting to localhost:3000...");
+      }
+
+      socket.on("connect", () => {
+        setConnectionStatus("✅ Connected to localhost:3000");
+      });
+
+      socket.on("disconnect", () => {
+        setConnectionStatus("❌ Disconnected");
+      });
+    }
+  }, [socket]);
 
   const createAndJoin = () => {
     const roomId = uuidv4();

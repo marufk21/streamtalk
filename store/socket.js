@@ -22,45 +22,76 @@ export const SocketProvider = (props) => {
     };
 
     const port = getCurrentPort();
-    const socketUrl =
-      process.env.NODE_ENV === "production"
-        ? "https://stream-talk.vercel.app/"
-        : `http://localhost:${port}/`;
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1");
 
-    // Establish a connection to the Socket.IO server
-    const connection = io(socketUrl, {
-      path: "/api/socket",
-      addTrailingSlash: false,
-      transports: ["websocket", "polling"],
-      timeout: 20000,
-      forceNew: true,
-    });
+    const socketUrl = isLocalhost
+      ? `http://localhost:${port}/`
+      : "https://stream-talk.vercel.app//";
 
-    console.log("Socket connection to:", socketUrl);
-    setSocket(connection);
+    // Force local development detection
+    if (
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1")
+    ) {
+    }
 
-    // Handle connection events
-    connection.on("connect", () => {
-      // Socket connected successfully
-    });
+    // Initialize the socket connection
+    const initializeSocket = async () => {
 
-    connection.on("disconnect", (reason) => {
-      // Socket disconnected
-    });
+      // Establish a connection to the Socket.IO server
+      const connection = io(socketUrl, {
+        path: "/api/socket",
+        transports: ["polling", "websocket"],
+        forceNew: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
 
-    // Handle connection error
-    connection.on("connect_error", async (err) => {
-      // Try to initialize the socket endpoint
-      try {
-        await fetch(`/api/socket`);
-      } catch (fetchError) {
-        // Failed to initialize socket endpoint
-      }
+      setSocket(connection);
+
+      // Handle connection events
+      connection.on("connect", () => {
+      });
+
+      connection.on("disconnect", (reason) => {
+        console.log("❌ Socket disconnected:", reason);
+      });
+
+      connection.on("reconnect", (attemptNumber) => {
+      });
+
+      connection.on("reconnect_attempt", (attemptNumber) => {
+      });
+
+      connection.on("reconnect_error", (error) => {
+      });
+
+      connection.on("reconnect_failed", () => {
+      });
+
+      // Handle connection error
+      connection.on("connect_error", async (err) => {
+      });
+
+      return connection;
+    };
+
+    let connection;
+    initializeSocket().then((conn) => {
+      connection = conn;
     });
 
     // Cleanup on unmount
     return () => {
-      connection.disconnect();
+      if (connection) {
+        console.log("Cleaning up socket connection...");
+        connection.disconnect();
+      }
     };
   }, []);
 
