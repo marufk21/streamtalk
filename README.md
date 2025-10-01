@@ -14,7 +14,7 @@
 - **Frontend**: Next.js (React Framework)
 - **Backend**: Node.js (with Socket.IO)
 - **Real-Time Communication**: WebRTC
-- **Styling**: Tailwind CSS 
+- **Styling**: Tailwind CSS
 
 ## Getting Started
 
@@ -80,11 +80,7 @@
 
 ### Signaling Server (Socket.IO)
 
-The signaling server facilitates the initial connection between peers using Socket.IO. You can start the server by running:
-
-```bash
-node server.js
-```
+The signaling server is now integrated into the Next.js API routes. Socket.IO runs automatically when you start the Next.js development server. The Socket.IO server runs on port 3000 by default.
 
 ### Deployment
 

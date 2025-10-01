@@ -47,16 +47,6 @@ const FloatingControls = ({
           <PhoneOff size={18} />
         </button>
 
-        {/* Audio Troubleshooter */}
-        {onTroubleshoot && (
-          <button
-            onClick={onTroubleshoot}
-            className="p-3 rounded-2xl transition-all duration-200 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-gray-200 hover:text-white shadow-lg"
-            title="Audio troubleshooter"
-          >
-            <Settings size={18} />
-          </button>
-        )}
       </div>
     </div>
   );
