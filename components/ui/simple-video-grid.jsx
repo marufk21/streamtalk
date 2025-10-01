@@ -8,7 +8,7 @@ const SimpleVideoGrid = ({
   onPlayerClick,
   myId,
   className = "",
-  isAudioEnabled, // Add actual audio state
+  isAudioEnabled,
 }) => {
   const playerEntries = Object.entries(players || {});
   const highlightedPlayer = highlightedPlayerId
@@ -30,7 +30,6 @@ const SimpleVideoGrid = ({
   const getVideoSize = (count, isHighlighted = false) => {
     if (isHighlighted) {
       return {
-        aspectRatio: "16/9",
         minHeight: "400px",
         maxHeight: "60vh",
       };
@@ -39,25 +38,21 @@ const SimpleVideoGrid = ({
     // Dynamic sizing based on participant count
     if (count === 1) {
       return {
-        aspectRatio: "16/9",
         minHeight: "300px",
         maxHeight: "50vh",
       };
     } else if (count === 2) {
       return {
-        aspectRatio: "16/9",
         minHeight: "250px",
         maxHeight: "40vh",
       };
     } else if (count <= 4) {
       return {
-        aspectRatio: "4/3",
         minHeight: "200px",
         maxHeight: "30vh",
       };
     } else {
       return {
-        aspectRatio: "4/3",
         minHeight: "150px",
         maxHeight: "25vh",
       };
@@ -95,9 +90,10 @@ const SimpleVideoGrid = ({
                 : "bg-black"
             }`}
             style={{
-              aspectRatio: videoSize.aspectRatio,
               minHeight: videoSize.minHeight,
               maxHeight: videoSize.maxHeight,
+              width: "100%",
+              height: "100%",
             }}
           >
             {player.playing ? (
@@ -110,10 +106,20 @@ const SimpleVideoGrid = ({
                 className="object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900 backdrop-blur-sm">
+              <div
+                className="relative overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900 backdrop-blur-sm"
+                style={{
+                  minHeight: videoSize.minHeight,
+                  maxHeight: videoSize.maxHeight,
+                  width: "100%",
+                  height: "100%",
+                }}
+              >
                 <UserSquare2
-                  size={isHighlighted ? 80 : totalCount <= 2 ? 60 : 40}
-                  className="text-purple-300"
+                  size={20}
+                  width="180%"
+                  height="100%"
+                  className="object-cover text-purple-300 px-32 py-16"
                 />
               </div>
             )}
@@ -162,11 +168,13 @@ const SimpleVideoGrid = ({
   );
 
   return (
-    <div className={`w-full h-full flex flex-col justify-center ${className}`}>
+    <div
+      className={`w-full h-full flex flex-col justify-center items-center ${className}`}
+    >
       {/* Main Video Area */}
       {highlightedPlayer && (
-        <div className="mb-6 flex justify-center">
-          <div className="w-full max-w-4xl">
+        <div className="mb-6 flex justify-center items-center w-full">
+          <div className="w-full max-w-4xl mx-auto">
             <PlayerCard
               key={`${highlightedPlayerId}-${highlightedPlayer.url}`}
               playerId={highlightedPlayerId}
@@ -181,11 +189,11 @@ const SimpleVideoGrid = ({
 
       {/* Participant Grid */}
       {otherPlayers.length > 0 && (
-        <div className="flex justify-center">
+        <div className="flex justify-center items-center w-full">
           <div
             className={`grid gap-4 ${getGridCols(
               otherPlayers.length
-            )} w-full max-w-6xl`}
+            )} w-full max-w-6xl justify-items-center`}
           >
             {otherPlayers.map(([playerId, player]) => (
               <PlayerCard
@@ -205,8 +213,8 @@ const SimpleVideoGrid = ({
       {!highlightedPlayer &&
         otherPlayers.length === 0 &&
         playerEntries.length === 1 && (
-          <div className="flex justify-center">
-            <div className="w-full max-w-3xl">
+          <div className="flex justify-center items-center w-full">
+            <div className="w-full max-w-3xl mx-auto">
               <PlayerCard
                 key={`${playerEntries[0][0]}-${playerEntries[0][1].url}`}
                 playerId={playerEntries[0][0]}

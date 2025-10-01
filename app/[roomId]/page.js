@@ -5,15 +5,12 @@ import { cloneDeep } from "lodash";
 import { useParams } from "next/navigation";
 
 import { useSocket } from "@/store/socket";
-import usePeer from "@/hooks/usePeer";
-import useMediaStream from "@/hooks/useMediaStream";
-import usePlayer from "@/hooks/usePlayer";
-import useChat from "@/hooks/useChat";
+import usePeer from "@/hooks/use-peer";
+import useMediaStream from "@/hooks/use-media-stream";
+import usePlayer from "@/hooks/use-player";
+import useChat from "@/hooks/use-chat";
 
-import Player from "@/components/player";
-import Bottom from "@/components/bottom-bar";
 import CopySection from "@/components/copy-section";
-import Chat from "@/components/chat";
 
 // Modern UI Components
 import SimpleCallLayout from "@/components/ui/simple-call-layout";
