@@ -25,7 +25,6 @@ app.prepare().then(() => {
   // Initialize Socket.IO
   const io = new Server(httpServer, {
     path: "/api/socket",
-    addTrailingSlash: false,
     cors: {
       origin: dev
         ? [
@@ -33,7 +32,7 @@ app.prepare().then(() => {
             "http://localhost:3001",
             "http://localhost:3002",
           ]
-        : "https://stream-talk.vercel.app/",
+        : "https://streamtalk.onrender.com",
       methods: ["GET", "POST"],
       credentials: true,
     },

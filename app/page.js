@@ -54,13 +54,6 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
         {/* Hero section */}
         <div className="text-center mb-12">
-          {/* Connection Status */}
-          <div className="mb-4 p-3 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10">
-            <p className="text-sm font-mono text-gray-300">
-              Connection Status: <span className="text-white">{connectionStatus}</span>
-            </p>
-          </div>
-          
           <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-red-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-pulse">
             Stream Talk
           </h1>
