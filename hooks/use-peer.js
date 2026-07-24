@@ -50,20 +50,37 @@ const usePeer = () => {
 
         myPeer.on("error", (error) => {
           console.error("❌ PeerJS error:", error);
-          // Retry connection after a delay
-          setTimeout(() => {
-            if (!myPeer.destroyed) {
-              console.log("🔄 Retrying PeerJS connection...");
-              myPeer.reconnect();
-            }
-          }, 2000);
+
+          // Only reconnect for server/socket errors, NOT per-peer connection failures
+          const isConnectionError =
+            error.type === "network" ||
+            error.type === "server-error" ||
+            error.type === "socket-error" ||
+            error.type === "socket-closed" ||
+            (typeof error === "string" &&
+              (error.includes("Lost connection") ||
+                error.includes("socket") ||
+                error.includes("network")));
+
+          if (isConnectionError) {
+            setTimeout(() => {
+              if (!myPeer.destroyed && myPeer.disconnected) {
+                console.log("🔄 Retrying PeerJS connection...");
+                myPeer.reconnect();
+              }
+            }, 2000);
+          }
+          // "webrtc" / "Could not connect to peer" errors are per-peer ICE failures
+          // and do not require reconnecting to the signaling server
         });
 
         myPeer.on("disconnected", () => {
           console.log("⚠️ PeerJS disconnected, attempting to reconnect...");
-          if (!myPeer.destroyed) {
-            myPeer.reconnect();
-          }
+          setTimeout(() => {
+            if (!myPeer.destroyed && myPeer.disconnected) {
+              myPeer.reconnect();
+            }
+          }, 2000);
         });
       } catch (error) {
         console.error("❌ Failed to initialize PeerJS:", error);

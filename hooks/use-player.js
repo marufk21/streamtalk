@@ -41,11 +41,8 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
   const toggleAudio = () => {
     if (!socket || !myId) return; // Safety check
 
-    // Toggle the actual media stream first
-    let newAudioState = false;
-    if (toggleMediaAudio) {
-      newAudioState = toggleMediaAudio();
-    }
+    // Toggle the actual media stream first, capture the returned new state
+    const newAudioState = toggleMediaAudio ? toggleMediaAudio() : false;
 
     setPlayers((prev) => {
       const copy = cloneDeep(prev);
@@ -68,16 +65,14 @@ const usePlayer = (myId, roomId, peer, mediaControls = {}) => {
   const toggleVideo = () => {
     if (!socket || !myId) return; // Safety check
 
-    // Toggle the actual media stream
-    if (toggleMediaVideo) {
-      toggleMediaVideo();
-    }
+    // Toggle the actual media stream first, capture the returned new state
+    const newVideoState = toggleMediaVideo ? toggleMediaVideo() : false;
 
     setPlayers((prev) => {
       const copy = cloneDeep(prev);
       // Safety check: ensure player exists before toggling
       if (copy[myId]) {
-        copy[myId].playing = isVideoEnabled; // Use actual video state
+        copy[myId].playing = newVideoState; // Use returned value, not stale closure state
       }
       return { ...copy };
     });

@@ -6,15 +6,7 @@ module.exports = {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-      },
       colors: {
-        prime: "#212529",
-        secondary: "#343a40",
-        buttonPrimary: "#d90429",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -53,6 +45,36 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-in-right": {
+          "0%": { transform: "translateX(100%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+        "scale-bounce": {
+          "0%": { transform: "scale(0.9)" },
+          "50%": { transform: "scale(1.03)" },
+          "100%": { transform: "scale(1)" },
+        },
+        typing: {
+          "0%, 60%, 100%": { transform: "translateY(0)" },
+          "30%": { transform: "translateY(-8px)" },
+        },
+      },
+      animation: {
+        "fade-in": "fade-in 0.4s ease-out",
+        "slide-up": "slide-up 0.4s ease-out",
+        "slide-in-right": "slide-in-right 0.3s ease-out",
+        "scale-bounce": "scale-bounce 0.25s ease-out",
+        typing: "typing 1.4s infinite",
       },
     },
   },

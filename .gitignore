@@ -29,6 +29,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+.claude 
 
 # typescript
 *.tsbuildinfo

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cloneDeep } from "lodash";
 import { useParams } from "next/navigation";
 
@@ -10,9 +10,6 @@ import useMediaStream from "@/hooks/use-media-stream";
 import usePlayer from "@/hooks/use-player";
 import useChat from "@/hooks/use-chat";
 
-import CopySection from "@/components/copy-section";
-
-// Modern UI Components
 import SimpleCallLayout from "@/components/ui/simple-call-layout";
 import FloatingControls from "@/components/ui/floating-controls";
 import SimpleVideoGrid from "@/components/ui/simple-video-grid";
@@ -21,7 +18,7 @@ import PermissionRequest from "@/components/ui/permission-request";
 
 const Room = () => {
   const socket = useSocket();
-  const { roomId } = useParams(); 
+  const { roomId } = useParams();
   const { peer, myId } = usePeer();
   const {
     stream,
@@ -55,7 +52,7 @@ const Room = () => {
   const [users, setUsers] = useState([]);
   const [callStartTime] = useState(Date.now());
   const [callDuration, setCallDuration] = useState(0);
-  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Initialize chat functionality
   const {
@@ -76,25 +73,28 @@ const Room = () => {
   }, [callStartTime]);
 
   // Add yourself to players when stream is ready
+  // Initial setup: add yourself to players when stream and myId are ready.
+  // Toggles are handled by usePlayer — no need to re-fire on audio/video state changes.
+  const hasSetupPlayer = useRef(false);
   useEffect(() => {
-    if (myId && stream) {
-      setPlayers((prev) => ({
-        ...prev,
-        [myId]: {
-          url: stream,
-          muted: true, // Always mute own audio to prevent feedback
-          playing: isVideoEnabled,
-          audioEnabled: isAudioEnabled, // Track actual audio state
-        },
-      }));
-    }
+    if (hasSetupPlayer.current || !myId || !stream) return;
+    hasSetupPlayer.current = true;
+    setPlayers((prev) => ({
+      ...prev,
+      [myId]: {
+        url: stream,
+        muted: true,
+        playing: isVideoEnabled,
+        audioEnabled: isAudioEnabled,
+      },
+    }));
   }, [myId, stream, isAudioEnabled, isVideoEnabled, setPlayers]);
 
   // Enhanced retry media stream with audio diagnostics
   const retryMediaStream = async () => {
     if (process.env.NODE_ENV === "development") {
       const { quickAudioCheck } = await import("@/utils/audio-diagnostics");
-      console.log("🔍 Running audio diagnostics before retry...");
+      console.log("Running audio diagnostics before retry...");
       await quickAudioCheck();
     }
     window.location.reload();
@@ -113,9 +113,9 @@ const Room = () => {
           ...prev,
           [newUser]: {
             url: incomingStream,
-            muted: false, // Allow remote audio to be heard
+            muted: false,
             playing: true,
-            audioEnabled: true, // Track actual audio state
+            audioEnabled: true,
           },
         }));
 
@@ -125,7 +125,6 @@ const Room = () => {
         }));
       });
 
-      // Handle call close event for outgoing calls
       call.on("close", () => {
         console.log(`Outgoing call closed with ${newUser}`);
         setPlayers((prev) => {
@@ -141,7 +140,6 @@ const Room = () => {
         });
       });
 
-      // Handle call error event for outgoing calls
       call.on("error", (error) => {
         console.error(`Outgoing call error with ${newUser}:`, error);
         setPlayers((prev) => {
@@ -173,9 +171,7 @@ const Room = () => {
       setPlayers((prev) => {
         const copy = cloneDeep(prev);
         if (copy[userId]) {
-          // Toggle the audioEnabled state for display purposes
           copy[userId].audioEnabled = !copy[userId].audioEnabled;
-          // Set muted based on audioEnabled state - if audio is disabled, mute it
           copy[userId].muted = !copy[userId].audioEnabled;
         }
         return { ...copy };
@@ -194,22 +190,18 @@ const Room = () => {
     const handleUserLeave = (userId) => {
       console.log(`user ${userId} is leaving the room`);
 
-      // Clean up chat data channel for leaving user
       cleanupPeerDataChannel(userId);
 
-      // Clean up peer connection
       if (users[userId]) {
         users[userId].close();
       }
 
-      // Remove from players state
       setPlayers((prev) => {
         const copy = cloneDeep(prev);
         delete copy[userId];
         return copy;
       });
 
-      // Remove from users state
       setUsers((prev) => {
         const copy = cloneDeep(prev);
         delete copy[userId];
@@ -241,9 +233,9 @@ const Room = () => {
           ...prev,
           [callerId]: {
             url: incomingStream,
-            muted: false, // Allow remote audio to be heard
+            muted: false,
             playing: true,
-            audioEnabled: true, // Track actual audio state
+            audioEnabled: true,
           },
         }));
 
@@ -253,10 +245,8 @@ const Room = () => {
         }));
       });
 
-      // Handle call close event
       call.on("close", () => {
         console.log(`Call closed with ${callerId}`);
-        // Remove from players and users when call is closed
         setPlayers((prev) => {
           const copy = cloneDeep(prev);
           delete copy[callerId];
@@ -270,10 +260,8 @@ const Room = () => {
         });
       });
 
-      // Handle call error event
       call.on("error", (error) => {
         console.error(`Call error with ${callerId}:`, error);
-        // Remove from players and users on error
         setPlayers((prev) => {
           const copy = cloneDeep(prev);
           delete copy[callerId];
@@ -289,29 +277,14 @@ const Room = () => {
     });
   }, [peer, setPlayers, stream]);
 
+  // Apply audio output device to all video elements when it changes
   useEffect(() => {
-    if (!stream || !myId) return;
-
-    console.log(`setting my stream ${myId}`);
-    setPlayers((prev) => ({
-      ...prev,
-      [myId]: {
-        url: stream,
-        muted: true, // Always mute own audio to prevent feedback
-        playing: isVideoEnabled, // Use actual video state
-      },
-    }));
-  }, [myId, setPlayers, stream, isVideoEnabled]); // Removed isAudioEnabled dependency
-
-  // Apply audio output device to all players when it changes
-  useEffect(() => {
-    if (selectedAudioOutput && selectedAudioOutput !== 'default') {
-      // Apply to all video elements in the page
-      const videoElements = document.querySelectorAll('video');
-      videoElements.forEach(video => {
+    if (selectedAudioOutput && selectedAudioOutput !== "default") {
+      const videoElements = document.querySelectorAll("video");
+      videoElements.forEach((video) => {
         if (video.setSinkId) {
-          video.setSinkId(selectedAudioOutput).catch(err => {
-            console.warn('Failed to set audio output device:', err);
+          video.setSinkId(selectedAudioOutput).catch((err) => {
+            console.warn("Failed to set audio output device:", err);
           });
         }
       });
@@ -338,58 +311,54 @@ const Room = () => {
           }
         }}
       >
-        {/* Main Video Area */}
-        <div className="h-full flex flex-col">
-          {/* Video Grid */}
-          <div className="flex-1 p-4 pb-24 overflow-hidden">
-            <SimpleVideoGrid
-              players={players}
-              highlightedPlayerId={
-                playerHighlighted
-                  ? Object.keys(players).find(
-                      (id) => players[id] === playerHighlighted
-                    )
-                  : null
-              }
-              onPlayerClick={(playerId) => {
-                console.log(`Player ${playerId} clicked`);
-              }}
-              myId={myId}
-              isAudioEnabled={isAudioEnabled} // Pass actual audio state
-              selectedAudioOutput={selectedAudioOutput} // Pass selected audio output
-              className="h-full"
-            />
-          </div>
-
-          {/* Room ID Copy Section - Hidden */}
-          <div className="hidden">
-            <CopySection roomId={roomId} />
-          </div>
-        </div>
-
-        {/* Floating Controls */}
-        {myId && socket && (
-          <FloatingControls
-            muted={!isAudioEnabled} // When audio is OFF, show as muted
-            playing={isVideoEnabled}
-            toggleAudio={toggleAudio}
-            toggleVideo={toggleVideo}
-            leaveRoom={leaveRoom}
-            onTroubleshoot={() => setShowTroubleshooter(true)}
-          />
-        )}
-
-        {/* Simple Chat Component */}
-        {myId && (
-          <SimpleChat
-            messages={messages}
-            onSendMessage={sendMessage}
-            isConnected={isChatConnected}
-            connectedPeers={connectedPeers}
+        {/* Video Grid */}
+        <div className="h-full p-4 pb-20 overflow-hidden">
+          <SimpleVideoGrid
+            players={players}
+            highlightedPlayerId={
+              playerHighlighted
+                ? Object.keys(players).find(
+                    (id) => players[id] === playerHighlighted
+                  )
+                : null
+            }
+            onPlayerClick={(playerId) => {
+              console.log(`Player ${playerId} clicked`);
+            }}
             myId={myId}
+            isAudioEnabled={isAudioEnabled}
+            selectedAudioOutput={selectedAudioOutput}
+            className="h-full"
           />
-        )}
+        </div>
       </SimpleCallLayout>
+
+      {/* Floating Controls */}
+      {myId && socket && (
+        <FloatingControls
+          muted={!isAudioEnabled}
+          playing={isVideoEnabled}
+          toggleAudio={toggleAudio}
+          toggleVideo={toggleVideo}
+          leaveRoom={leaveRoom}
+          onToggleChat={() => setIsChatOpen((prev) => !prev)}
+          isChatOpen={isChatOpen}
+          unreadCount={messages.length}
+        />
+      )}
+
+      {/* Chat Panel */}
+      {myId && (
+        <SimpleChat
+          messages={messages}
+          onSendMessage={sendMessage}
+          isConnected={isChatConnected}
+          connectedPeers={connectedPeers}
+          myId={myId}
+          isOpen={isChatOpen}
+          onToggle={setIsChatOpen}
+        />
+      )}
     </>
   );
 };
