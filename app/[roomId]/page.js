@@ -50,7 +50,7 @@ const Room = () => {
   });
 
   const [users, setUsers] = useState([]);
-  const [callStartTime] = useState(Date.now());
+  const [callStartTime] = useState(() => Date.now());
   const [callDuration, setCallDuration] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
 

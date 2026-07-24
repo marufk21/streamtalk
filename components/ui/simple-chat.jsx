@@ -25,6 +25,10 @@ const SimpleChat = ({
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
@@ -36,10 +40,6 @@ const SimpleChat = ({
       setTimeout(() => inputRef.current.focus(), 100);
     }
   }, [isOpen]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();

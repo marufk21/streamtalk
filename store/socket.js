@@ -253,7 +253,8 @@ export const SocketProvider = (props) => {
 
     const apiSocket = new APISocket();
     socketRef.current = apiSocket;
-    setSocket(apiSocket);
+    // Defer state update to avoid synchronous setState in effect (React 19).
+    queueMicrotask(() => setSocket(apiSocket));
 
     // Handle connection events
     apiSocket.on("connecting", () => {

@@ -225,11 +225,17 @@ const useChat = (peer, myId, users = {}) => {
     });
   }, [peer, myId, users, dataChannels, setupDataChannel]);
 
-  // Cleanup effect
+  // Keep a ref to the latest dataChannels for the unmount cleanup effect.
+  const dataChannelsRef = useRef(dataChannels);
+  useEffect(() => {
+    dataChannelsRef.current = dataChannels;
+  });
+
+  // Cleanup effect — captures latest dataChannels via ref
   useEffect(() => {
     return () => {
       // Cleanup all data channels on unmount
-      Object.entries(dataChannels).forEach(([peerId, channel]) => {
+      Object.entries(dataChannelsRef.current).forEach(([peerId, channel]) => {
         try {
           channel.close();
         } catch (error) {

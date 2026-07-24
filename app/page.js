@@ -11,33 +11,36 @@ import { Badge } from "@/components/ui/badge";
 export default function Home() {
   const router = useRouter();
   const [roomId, setRoomId] = useState("");
-  const [connectionStatus, setConnectionStatus] = useState("Checking...");
   const socket = useSocket();
+
+  // Derive initial status from socket state during render; events handle updates.
+  const [eventStatus, setEventStatus] = useState(null);
+  const connectionStatus =
+    eventStatus ??
+    (socket
+      ? socket.isConnected
+        ? "Connected"
+        : socket.isConnecting
+          ? "Connecting..."
+          : "Ready"
+      : "Checking...");
 
   useEffect(() => {
     if (socket) {
-      if (socket.isConnected) {
-        setConnectionStatus("Connected");
-      } else if (socket.isConnecting) {
-        setConnectionStatus("Connecting...");
-      } else {
-        setConnectionStatus("Ready");
-      }
-
       socket.on("connecting", () => {
-        setConnectionStatus("Connecting...");
+        setEventStatus("Connecting...");
       });
 
       socket.on("connect", () => {
-        setConnectionStatus("Connected");
+        setEventStatus("Connected");
       });
 
       socket.on("disconnect", () => {
-        setConnectionStatus("Disconnected");
+        setEventStatus("Disconnected");
       });
 
       socket.on("connect_error", () => {
-        setConnectionStatus("Connection failed");
+        setEventStatus("Connection failed");
       });
     }
   }, [socket]);

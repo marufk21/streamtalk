@@ -8,11 +8,11 @@ const usePeer = () => {
   const { roomId } = useParams(); // Updated to use app directory router
   const [peer, setPeer] = useState(null);
   const [myId, setMyId] = useState("");
-  const isPeerSet = useRef(false);
+  const isPeerSetRef = useRef(false);
 
   useEffect(() => {
-    if (isPeerSet.current || !roomId || !socket) return;
-    isPeerSet.current = true;
+    if (isPeerSetRef.current || !roomId || !socket) return;
+    isPeerSetRef.current = true;
     let myPeer;
 
     const initPeer = async () => {
@@ -84,7 +84,7 @@ const usePeer = () => {
         });
       } catch (error) {
         console.error("❌ Failed to initialize PeerJS:", error);
-        isPeerSet.current = false; // Allow retry
+        isPeerSetRef.current = false; // Allow retry
       }
     };
 

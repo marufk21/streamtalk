@@ -1,8 +1,152 @@
 import ReactPlayer from "react-player";
-import { Mic, MicOff, UserSquare2, Users } from "lucide-react";
+import { Mic, MicOff, Users } from "lucide-react";
 import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+// --- Pure helpers (outside component so they're stable references) ---
+
+const getGridCols = (count) => {
+  if (count === 1) return "grid-cols-1";
+  if (count === 2) return "grid-cols-2";
+  if (count === 3) return "grid-cols-3";
+  if (count <= 4) return "grid-cols-2";
+  return "grid-cols-3";
+};
+
+const getVideoSize = (count, isHighlighted = false) => {
+  if (isHighlighted) {
+    return { minHeight: "400px", maxHeight: "60vh" };
+  }
+  if (count === 1) return { minHeight: "300px", maxHeight: "50vh" };
+  if (count === 2) return { minHeight: "250px", maxHeight: "40vh" };
+  if (count <= 4) return { minHeight: "200px", maxHeight: "30vh" };
+  return { minHeight: "150px", maxHeight: "25vh" };
+};
+
+// --- PlayerCard (defined at module level — React 19 static-components rule) ---
+
+const PlayerCard = memo(
+  ({
+    playerId,
+    player,
+    isHighlighted = false,
+    totalCount = 1,
+    isAudioEnabled,
+    myId,
+    onPlayerClick,
+    selectedAudioOutput,
+  }) => {
+    const isMe = playerId === myId;
+    const videoSize = getVideoSize(totalCount, isHighlighted);
+    const playerMuted = isMe
+      ? !isAudioEnabled
+      : !(player.audioEnabled ?? !player.muted);
+
+    return (
+      <div
+        className={`relative cursor-pointer transition-all duration-200 ${
+          isHighlighted ? "col-span-full" : ""
+        }`}
+        onClick={() => onPlayerClick?.(playerId)}
+      >
+        {/* Video Container */}
+        <div
+          className={`relative overflow-hidden rounded-lg transition-all duration-200 ${
+            isHighlighted
+              ? "ring-2 ring-border bg-black"
+              : "border border-border bg-black hover:border-border/70"
+          }`}
+          style={{
+            minHeight: videoSize.minHeight,
+            maxHeight: videoSize.maxHeight,
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          {player.playing ? (
+            <ReactPlayer
+              url={player.url}
+              muted={player.muted}
+              playing={player.playing}
+              width="100%"
+              height="100%"
+              className="object-cover"
+              onReady={(player) => {
+                if (
+                  selectedAudioOutput &&
+                  selectedAudioOutput !== "default"
+                ) {
+                  const videoElement = player.getInternalPlayer();
+                  if (videoElement && videoElement.setSinkId) {
+                    videoElement
+                      .setSinkId(selectedAudioOutput)
+                      .catch((err) => {
+                        console.warn(
+                          "Failed to set audio output device:",
+                          err
+                        );
+                      });
+                  }
+                }
+              }}
+            />
+          ) : (
+            <div
+              className="flex items-center justify-center bg-card"
+              style={{
+                minHeight: videoSize.minHeight,
+                maxHeight: videoSize.maxHeight,
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <Avatar className="w-16 h-16">
+                <AvatarFallback className="text-muted-foreground text-lg">
+                  {(playerId?.slice(0, 2) || "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+
+          {/* User Info Overlay */}
+          <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+            <Badge
+              variant={playerMuted ? "destructive" : "secondary"}
+              className="px-1 h-5"
+            >
+              {playerMuted ? (
+                <MicOff size={10} />
+              ) : (
+                <Mic size={10} />
+              )}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] font-medium">
+              {isMe ? "You" : `User ${playerId.slice(0, 4)}`}
+            </Badge>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.playerId === nextProps.playerId &&
+      prevProps.player.url === nextProps.player.url &&
+      prevProps.player.muted === nextProps.player.muted &&
+      prevProps.player.playing === nextProps.player.playing &&
+      prevProps.isHighlighted === nextProps.isHighlighted &&
+      prevProps.totalCount === nextProps.totalCount &&
+      prevProps.isAudioEnabled === nextProps.isAudioEnabled &&
+      prevProps.myId === nextProps.myId &&
+      prevProps.selectedAudioOutput === nextProps.selectedAudioOutput
+    );
+  }
+);
+
+PlayerCard.displayName = "PlayerCard";
+
+// --- SimpleVideoGrid ---
 
 const SimpleVideoGrid = ({
   players,
@@ -21,139 +165,10 @@ const SimpleVideoGrid = ({
     ([id]) => id !== highlightedPlayerId
   );
 
-  const getGridCols = (count) => {
-    if (count === 1) return "grid-cols-1";
-    if (count === 2) return "grid-cols-2";
-    if (count === 3) return "grid-cols-3";
-    if (count <= 4) return "grid-cols-2";
-    return "grid-cols-3";
-  };
-
-  const getVideoSize = (count, isHighlighted = false) => {
-    if (isHighlighted) {
-      return { minHeight: "400px", maxHeight: "60vh" };
-    }
-    if (count === 1) return { minHeight: "300px", maxHeight: "50vh" };
-    if (count === 2) return { minHeight: "250px", maxHeight: "40vh" };
-    if (count <= 4) return { minHeight: "200px", maxHeight: "30vh" };
-    return { minHeight: "150px", maxHeight: "25vh" };
-  };
-
-  const PlayerCard = memo(
-    ({
-      playerId,
-      player,
-      isHighlighted = false,
-      totalCount = 1,
-      isAudioEnabled,
-    }) => {
-      const isMe = playerId === myId;
-      const videoSize = getVideoSize(totalCount, isHighlighted);
-      const playerMuted = isMe ? !isAudioEnabled : !(player.audioEnabled ?? !player.muted);
-
-      return (
-        <div
-          className={`relative cursor-pointer transition-all duration-200 ${
-            isHighlighted ? "col-span-full" : ""
-          }`}
-          onClick={() => onPlayerClick?.(playerId)}
-        >
-          {/* Video Container */}
-          <div
-            className={`relative overflow-hidden rounded-lg transition-all duration-200 ${
-              isHighlighted
-                ? "ring-2 ring-border bg-black"
-                : "border border-border bg-black hover:border-border/70"
-            }`}
-            style={{
-              minHeight: videoSize.minHeight,
-              maxHeight: videoSize.maxHeight,
-              width: "100%",
-              height: "100%",
-            }}
-          >
-            {player.playing ? (
-              <ReactPlayer
-                url={player.url}
-                muted={player.muted}
-                playing={player.playing}
-                width="100%"
-                height="100%"
-                className="object-cover"
-                onReady={(player) => {
-                  if (
-                    selectedAudioOutput &&
-                    selectedAudioOutput !== "default"
-                  ) {
-                    const videoElement = player.getInternalPlayer();
-                    if (videoElement && videoElement.setSinkId) {
-                      videoElement
-                        .setSinkId(selectedAudioOutput)
-                        .catch((err) => {
-                          console.warn(
-                            "Failed to set audio output device:",
-                            err
-                          );
-                        });
-                    }
-                  }
-                }}
-              />
-            ) : (
-              <div
-                className="flex items-center justify-center bg-card"
-                style={{
-                  minHeight: videoSize.minHeight,
-                  maxHeight: videoSize.maxHeight,
-                  width: "100%",
-                  height: "100%",
-                }}
-              >
-                <Avatar className="w-16 h-16">
-                  <AvatarFallback className="text-muted-foreground text-lg">
-                    {(playerId?.slice(0, 2) || "U").toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            )}
-
-            {/* User Info Overlay */}
-            <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-              <Badge
-                variant={playerMuted ? "destructive" : "secondary"}
-                className="px-1 h-5"
-              >
-                {playerMuted ? (
-                  <MicOff size={10} />
-                ) : (
-                  <Mic size={10} />
-                )}
-              </Badge>
-              <Badge variant="secondary" className="text-[10px] font-medium">
-                {isMe ? "You" : `User ${playerId.slice(0, 4)}`}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      );
-    },
-    (prevProps, nextProps) => {
-      return (
-        prevProps.playerId === nextProps.playerId &&
-        prevProps.player.url === nextProps.player.url &&
-        prevProps.player.muted === nextProps.player.muted &&
-        prevProps.player.playing === nextProps.player.playing &&
-        prevProps.isHighlighted === nextProps.isHighlighted &&
-        prevProps.totalCount === nextProps.totalCount &&
-        prevProps.isAudioEnabled === nextProps.isAudioEnabled
-      );
-    }
-  );
-
-  PlayerCard.displayName = "PlayerCard";
-
   return (
-    <div className={`w-full h-full flex flex-col justify-center items-center ${className}`}>
+    <div
+      className={`w-full h-full flex flex-col justify-center items-center ${className}`}
+    >
       {/* Main Video Area */}
       {highlightedPlayer && (
         <div className="mb-4 flex justify-center items-center w-full">
@@ -165,6 +180,9 @@ const SimpleVideoGrid = ({
               isHighlighted={true}
               totalCount={playerEntries.length}
               isAudioEnabled={isAudioEnabled}
+              myId={myId}
+              onPlayerClick={onPlayerClick}
+              selectedAudioOutput={selectedAudioOutput}
             />
           </div>
         </div>
@@ -184,6 +202,9 @@ const SimpleVideoGrid = ({
                 isHighlighted={false}
                 totalCount={playerEntries.length}
                 isAudioEnabled={isAudioEnabled}
+                myId={myId}
+                onPlayerClick={onPlayerClick}
+                selectedAudioOutput={selectedAudioOutput}
               />
             ))}
           </div>
@@ -203,6 +224,9 @@ const SimpleVideoGrid = ({
                 isHighlighted={false}
                 totalCount={1}
                 isAudioEnabled={isAudioEnabled}
+                myId={myId}
+                onPlayerClick={onPlayerClick}
+                selectedAudioOutput={selectedAudioOutput}
               />
             </div>
           </div>

@@ -98,8 +98,9 @@ const useMediaStream = () => {
 
   // Update devices on mount and when devices change
   useEffect(() => {
-    updateAudioDevices();
-    
+    // Defer to avoid synchronous setState in effect (React 19).
+    queueMicrotask(() => updateAudioDevices());
+
     // Listen for device changes
     const handleDeviceChange = () => {
       console.log('📱 Audio devices changed');
