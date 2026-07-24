@@ -52,51 +52,58 @@ const PlayerCard = memo(
       >
         {/* Video Container */}
         <div
-          className={`relative overflow-hidden rounded-lg transition-all duration-200 ${
+          className={`relative overflow-hidden rounded-lg transition-all duration-200 aspect-video [&_video]:object-cover ${
             isHighlighted
               ? "ring-2 ring-border bg-black"
               : "border border-border bg-black hover:border-border/70"
           }`}
           style={{
-            minHeight: videoSize.minHeight,
-            maxHeight: videoSize.maxHeight,
-            width: "100%",
-            height: "100%",
+            height: videoSize.minHeight,
           }}
         >
           {player.playing ? (
-            <ReactPlayer
-              url={player.url}
-              muted={player.muted}
-              playing={player.playing}
-              width="100%"
-              height="100%"
-              className="object-cover"
-              onReady={(player) => {
-                if (
-                  selectedAudioOutput &&
-                  selectedAudioOutput !== "default"
-                ) {
-                  const videoElement = player.getInternalPlayer();
-                  if (videoElement && videoElement.setSinkId) {
-                    videoElement
-                      .setSinkId(selectedAudioOutput)
-                      .catch((err) => {
-                        console.warn(
-                          "Failed to set audio output device:",
-                          err
-                        );
-                      });
+            <div
+              style={
+                isMe
+                  ? {
+                      transform: "scaleX(-1)",
+                      width: "100%",
+                      height: "100%",
+                    }
+                  : { width: "100%", height: "100%" }
+              }
+            >
+              <ReactPlayer
+                url={player.url}
+                muted={player.muted}
+                playing={player.playing}
+                width="100%"
+                height="100%"
+                className="object-cover"
+                onReady={(player) => {
+                  if (
+                    selectedAudioOutput &&
+                    selectedAudioOutput !== "default"
+                  ) {
+                    const videoElement = player.getInternalPlayer();
+                    if (videoElement && videoElement.setSinkId) {
+                      videoElement
+                        .setSinkId(selectedAudioOutput)
+                        .catch((err) => {
+                          console.warn(
+                            "Failed to set audio output device:",
+                            err
+                          );
+                        });
+                    }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            </div>
           ) : (
             <div
               className="flex items-center justify-center bg-card"
               style={{
-                minHeight: videoSize.minHeight,
-                maxHeight: videoSize.maxHeight,
                 width: "100%",
                 height: "100%",
               }}
@@ -205,7 +212,7 @@ const SimpleVideoGrid = ({
                 myId={myId}
                 onPlayerClick={onPlayerClick}
                 selectedAudioOutput={selectedAudioOutput}
-              />
+                />
             ))}
           </div>
         </div>
@@ -227,7 +234,7 @@ const SimpleVideoGrid = ({
                 myId={myId}
                 onPlayerClick={onPlayerClick}
                 selectedAudioOutput={selectedAudioOutput}
-              />
+                />
             </div>
           </div>
         )}

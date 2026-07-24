@@ -10,11 +10,11 @@ import useMediaStream from "@/hooks/use-media-stream";
 import usePlayer from "@/hooks/use-player";
 import useChat from "@/hooks/use-chat";
 
-import SimpleCallLayout from "@/components/ui/simple-call-layout";
-import FloatingControls from "@/components/ui/floating-controls";
-import SimpleVideoGrid from "@/components/ui/simple-video-grid";
-import SimpleChat from "@/components/ui/simple-chat";
-import PermissionRequest from "@/components/ui/permission-request";
+import SimpleCallLayout from "@/components/simple-call-layout";
+import FloatingControls from "@/components/floating-controls";
+import SimpleVideoGrid from "@/components/simple-video-grid";
+import SimpleChat from "@/components/simple-chat";
+import PermissionRequest from "@/components/permission-request";
 
 const Room = () => {
   const socket = useSocket();

@@ -22,14 +22,25 @@ const usePeer = () => {
         myPeer = new Peer({
           config: {
             iceServers: [
+              // STUN servers — discover public IP
               { urls: "stun:stun.l.google.com:19302" },
               { urls: "stun:stun1.l.google.com:19302" },
-              { urls: "stun:stun2.l.google.com:19302" },
-              { urls: "stun:stun3.l.google.com:19302" },
-              { urls: "stun:stun4.l.google.com:19302" },
-              // Additional STUN servers for better connectivity
-              { urls: "stun:stun.ekiga.net" },
-              { urls: "stun:stun.ideasip.com" },
+              // TURN servers — relay media when direct P2P fails (NAT/firewall)
+              {
+                urls: "turn:openrelay.metered.ca:80",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
+              {
+                urls: "turn:openrelay.metered.ca:443",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
+              {
+                urls: "turn:openrelay.metered.ca:443?transport=tcp",
+                username: "openrelayproject",
+                credential: "openrelayproject",
+              },
             ],
             sdpSemantics: "unified-plan", // Use unified plan for better compatibility
             iceCandidatePoolSize: 10, // Gather more ICE candidates

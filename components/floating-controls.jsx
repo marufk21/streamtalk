@@ -56,6 +56,7 @@ const FloatingControls = ({
                 {!playing ? "Start camera" : "Stop camera"}
               </TooltipContent>
             </Tooltip>
+
           </div>
 
           {/* Center — Leave Call */}
