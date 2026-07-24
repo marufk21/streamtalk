@@ -8,20 +8,19 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const getGridCols = (count) => {
   if (count === 1) return "grid-cols-1";
-  if (count === 2) return "grid-cols-2";
-  if (count === 3) return "grid-cols-3";
-  if (count <= 4) return "grid-cols-2";
-  return "grid-cols-3";
+  if (count === 2) return "grid-cols-1 sm:grid-cols-2";
+  if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
+  return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
 };
 
 const getVideoSize = (count, isHighlighted = false) => {
   if (isHighlighted) {
-    return { minHeight: "400px", maxHeight: "60vh" };
+    return { minHeight: "clamp(180px, 35vh, 400px)", maxHeight: "60vh" };
   }
-  if (count === 1) return { minHeight: "300px", maxHeight: "50vh" };
-  if (count === 2) return { minHeight: "250px", maxHeight: "40vh" };
-  if (count <= 4) return { minHeight: "200px", maxHeight: "30vh" };
-  return { minHeight: "150px", maxHeight: "25vh" };
+  if (count === 1) return { minHeight: "clamp(160px, 28vh, 300px)", maxHeight: "50vh" };
+  if (count === 2) return { minHeight: "clamp(130px, 22vh, 250px)", maxHeight: "40vh" };
+  if (count <= 4) return { minHeight: "clamp(110px, 18vh, 200px)", maxHeight: "30vh" };
+  return { minHeight: "clamp(90px, 15vh, 150px)", maxHeight: "25vh" };
 };
 
 // --- PlayerCard (defined at module level — React 19 static-components rule) ---
@@ -63,15 +62,11 @@ const PlayerCard = memo(
         >
           {player.playing ? (
             <div
-              style={
-                isMe
-                  ? {
-                      transform: "scaleX(-1)",
-                      width: "100%",
-                      height: "100%",
-                    }
-                  : { width: "100%", height: "100%" }
-              }
+              style={{
+                transform: "scaleX(-1)",
+                width: "100%",
+                height: "100%",
+              }}
             >
               <ReactPlayer
                 url={player.url}
@@ -108,8 +103,8 @@ const PlayerCard = memo(
                 height: "100%",
               }}
             >
-              <Avatar className="w-16 h-16">
-                <AvatarFallback className="text-muted-foreground text-lg">
+              <Avatar className="w-10 h-10 sm:w-14 sm:h-16">
+                <AvatarFallback className="text-muted-foreground text-sm sm:text-lg">
                   {(playerId?.slice(0, 2) || "U").toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -117,18 +112,18 @@ const PlayerCard = memo(
           )}
 
           {/* User Info Overlay */}
-          <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+          <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 flex items-center gap-1 sm:gap-1.5">
             <Badge
               variant={playerMuted ? "destructive" : "secondary"}
-              className="px-1 h-5"
+              className="px-1 h-4 sm:h-5"
             >
               {playerMuted ? (
-                <MicOff size={10} />
+                <MicOff size={9} />
               ) : (
-                <Mic size={10} />
+                <Mic size={9} />
               )}
             </Badge>
-            <Badge variant="secondary" className="text-[10px] font-medium">
+            <Badge variant="secondary" className="text-[9px] sm:text-[10px] font-medium px-1.5 h-4 sm:h-5">
               {isMe ? "You" : `User ${playerId.slice(0, 4)}`}
             </Badge>
           </div>
@@ -178,8 +173,8 @@ const SimpleVideoGrid = ({
     >
       {/* Main Video Area */}
       {highlightedPlayer && (
-        <div className="mb-4 flex justify-center items-center w-full">
-          <div className="w-full max-w-4xl mx-auto">
+        <div className="mb-2 sm:mb-3 md:mb-4 flex justify-center items-center w-full">
+          <div className="w-full max-w-2xl sm:max-w-3xl md:max-w-4xl mx-auto">
             <PlayerCard
               key={`${highlightedPlayerId}-${highlightedPlayer.url}`}
               playerId={highlightedPlayerId}
@@ -199,7 +194,7 @@ const SimpleVideoGrid = ({
       {otherPlayers.length > 0 && (
         <div className="flex justify-center items-center w-full">
           <div
-            className={`grid gap-3 ${getGridCols(otherPlayers.length)} w-full max-w-6xl justify-items-center`}
+            className={`grid gap-1.5 sm:gap-2 md:gap-3 ${getGridCols(otherPlayers.length)} w-full max-w-full sm:max-w-3xl md:max-w-6xl justify-items-center`}
           >
             {otherPlayers.map(([playerId, player]) => (
               <PlayerCard
@@ -222,8 +217,8 @@ const SimpleVideoGrid = ({
       {!highlightedPlayer &&
         otherPlayers.length === 0 &&
         playerEntries.length === 1 && (
-          <div className="flex justify-center items-center w-full">
-            <div className="w-full max-w-3xl mx-auto">
+          <div className="flex justify-center items-center w-full px-1 sm:px-0">
+            <div className="w-full max-w-md sm:max-w-2xl md:max-w-3xl mx-auto">
               <PlayerCard
                 key={`${playerEntries[0][0]}-${playerEntries[0][1].url}`}
                 playerId={playerEntries[0][0]}
@@ -242,16 +237,16 @@ const SimpleVideoGrid = ({
       {/* Empty State */}
       {playerEntries.length === 0 && (
         <div className="w-full h-full flex items-center justify-center animate-fade-in">
-          <div className="text-center space-y-3">
-            <Avatar className="w-16 h-16 mx-auto">
+          <div className="text-center space-y-2 sm:space-y-3 px-4">
+            <Avatar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto">
               <AvatarFallback>
-                <Users size={24} className="text-muted-foreground" />
+                <Users size={18} className="text-muted-foreground" />
               </AvatarFallback>
             </Avatar>
-            <h3 className="text-base font-medium text-foreground">
+            <h3 className="text-sm sm:text-base font-medium text-foreground">
               Waiting for participants
             </h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-[240px] sm:max-w-xs">
               Share the room link to invite others to join the call
             </p>
           </div>

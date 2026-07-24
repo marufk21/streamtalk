@@ -1,6 +1,5 @@
 import { Mic, Video, PhoneOff, MicOff, VideoOff, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -22,7 +21,7 @@ const FloatingControls = ({
   return (
     <TooltipProvider>
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between h-16 px-4 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4 max-w-2xl mx-auto">
           {/* Left — Media Controls */}
           <div className="flex items-center gap-2">
             <Tooltip>
@@ -33,7 +32,7 @@ const FloatingControls = ({
                   onClick={toggleAudio}
                   aria-label={muted ? "Unmute microphone" : "Mute microphone"}
                 >
-                  {muted ? <MicOff size={18} /> : <Mic size={18} />}
+                  {muted ? <MicOff size={16} /> : <Mic size={16} />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -66,7 +65,7 @@ const FloatingControls = ({
                 variant="destructive"
                 size="icon"
                 onClick={leaveRoom}
-                className="h-11 w-11"
+                className="h-9 w-9 sm:h-11 sm:w-11"
                 aria-label="Leave call"
               >
                 <PhoneOff size={20} />

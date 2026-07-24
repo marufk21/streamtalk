@@ -71,7 +71,7 @@ const SimpleCallLayout = ({
       >
         {/* Top Bar */}
         <header className="shrink-0 border-b bg-background/80 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center justify-between px-3 sm:px-4 h-12 sm:h-14">
             {/* Room Info */}
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="gap-1.5 pl-2 pr-3 py-1">

@@ -312,7 +312,7 @@ const Room = () => {
         }}
       >
         {/* Video Grid */}
-        <div className="h-full p-4 pb-20 overflow-hidden">
+        <div className="h-full p-2 sm:p-4 pb-16 sm:pb-20 overflow-hidden">
           <SimpleVideoGrid
             players={players}
             highlightedPlayerId={
